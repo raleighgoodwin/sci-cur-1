@@ -27,12 +27,11 @@ df_m <- rbind(df_ml1, df_ml2, df_mc)
 ```
 
 ```{r}
-df_qc <- df_q %>% 
-  clean_qualtrics() %>% 
+df_q %>% 
+  mutate(dup = duplicated(id))
   filter(duplicated(.) == F)
 
 df_q %>% 
-  clean_qualtrics() %>% 
   filter(duplicated(.) == T)
 
 df_mc <- df_m %>% 
@@ -58,6 +57,6 @@ reject <- df_match %>%
 
 
 ```{r}
-# mtchr(df_m, df_qd)
+mtchr(df_m, df_qc)
 ```
 
