@@ -3,3 +3,61 @@ title: "comp-lib"
 output: html_document
 ---
 
+# load libraries
+```{r}
+library(tidyverse)
+library(here)
+library(rio)
+library(ggplot2)
+library(Hmisc)
+library(lubridate)
+```
+
+# import data
+```{r}
+df_ml1 <- import(here("comp-data", "sci-cur-cr-lib1-data.csv")) %>% 
+  mutate(batch = "lib1")
+df_ml2 <- import(here("comp-data", "scicur-comp-lib2.csv")) %>% 
+  mutate(batch = "lib2")
+df_mc <- import(here("comp-data", "scicur-comp-con-071822-1548.csv")) %>% 
+  mutate(batch = "con")
+df_q <- import(here("comp-data", "scicur-comp-lib.csv"))
+
+df_m <- rbind(df_ml1, df_ml2, df_mc)
+```
+
+```{r}
+df_qc <- df_q %>% 
+  clean_qualtrics() %>% 
+  filter(duplicated(.) == F)
+
+df_q %>% 
+  clean_qualtrics() %>% 
+  filter(duplicated(.) == T)
+
+df_mc <- df_m %>% 
+  clean_mturk()
+
+df_q %>% 
+  filter("ID" == "AS8JG1LSWTMGY")
+```
+
+```{r}
+df_match <- match_dfs(df_mc, df_qc) %>% 
+  clean_matchdf()
+
+df_matchs <- df_match %>% 
+  filter(submitted == 1)
+
+approve <- df_match %>% 
+  filter(submitted == 1 & match == 1)
+
+reject <- df_match %>% 
+  filter(submitted == 0)
+```
+
+
+```{r}
+# mtchr(df_m, df_qd)
+```
+
