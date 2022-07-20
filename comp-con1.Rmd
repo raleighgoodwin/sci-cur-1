@@ -1,0 +1,54 @@
+---
+title: "con1-comp"
+output: html_document
+---
+
+# load libraries
+```{r}
+library(tidyverse)
+library(here)
+library(rio)
+
+```
+
+# import data
+```{r}
+df_ml1 <- import(here("comp-data", "sci-cur-cr-lib1-data.csv")) %>% 
+  mutate(batchm = "lib1")
+df_ml2 <- import(here("comp-data", "scicur-comp-lib2.csv")) %>% 
+  mutate(batchm = "lib2")
+df_mc1 <- import(here("comp-data", "scicur-comp-con1-071922.csv")) %>% 
+  mutate(batchm = "con2")
+df_q <- import(here("comp-data", "scicurQ-concomp-071922.csv"))
+
+df_m <- rbind(df_ml1, df_ml2, df_mc1)
+
+con_comp <- mtchr(df_m, df_q, kill_switch = F, label_m = "batchm")
+
+con_comp %>% 
+  filter(batchm == "con2" & pending == 1 & con == 0)
+```
+
+```{r}
+testdf_ml1 <- import(here("comp-data", "sci-cur-cr-lib1-data.csv"))
+testdf_ml2 <- import(here("comp-data", "scicur-comp-lib2.csv"))
+testdf_mc1 <- import(here("comp-data", "scicur-comp-con-071822-1548.csv"))
+testdf_mc2 <- import(here("comp-data", "scicur-comp-con1-071922.csv"))
+
+merge_df(c(testdf_mc1, testdf_mc2, testdf_ml1, testdf_ml2), 7)
+```
+
+
+```{r}
+mtchr(df_m, df_q, kill_switch = F)
+```
+
+```{r}
+test_q <- clean_qualtrics(df_q)
+test_m <- clean_mturk(df_m)
+
+check_duplicates(test_m, test_q, F)
+
+match_dfs(test_m, test_q)
+```
+

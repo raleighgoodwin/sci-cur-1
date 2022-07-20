@@ -8,9 +8,7 @@ output: html_document
 library(tidyverse)
 library(here)
 library(rio)
-library(ggplot2)
-library(Hmisc)
-library(lubridate)
+
 ```
 
 # import data
@@ -19,11 +17,13 @@ df_ml1 <- import(here("comp-data", "sci-cur-cr-lib1-data.csv")) %>%
   mutate(batch = "lib1")
 df_ml2 <- import(here("comp-data", "scicur-comp-lib2.csv")) %>% 
   mutate(batch = "lib2")
-df_mc <- import(here("comp-data", "scicur-comp-con-071822-1548.csv")) %>% 
-  mutate(batch = "con")
-df_q <- import(here("comp-data", "scicur-comp-lib.csv"))
+df_mc1 <- import(here("comp-data", "scicur-comp-con-071822-1548.csv")) %>% 
+  mutate(batch = "con1")
+df_mc2 <- import(here("comp-data", "scicur-comp-con1-071922.csv")) %>% 
+  mutate(batch = "con2")
+df_q <- import(here("comp-data", "scicurQ-concomp-071922.csv"))
 
-df_m <- rbind(df_ml1, df_ml2, df_mc)
+df_m <- rbind(df_ml1, df_ml2, df_mc1, df_mc2)
 ```
 
 ```{r}
@@ -34,15 +34,15 @@ df_q %>%
 df_q %>% 
   filter(duplicated(.) == T)
 
-df_mc <- df_m %>% 
+df_m <- df_m %>% 
   clean_mturk()
 
 df_q %>% 
-  filter("ID" == "AS8JG1LSWTMGY")
+  filter("ID" == "A1IJ56N5Z4TT46")
 ```
 
 ```{r}
-df_match <- match_dfs(df_mc, df_qc) %>% 
+df_match <- match_dfs(df_mc1, df_qc) %>% 
   clean_matchdf()
 
 df_matchs <- df_match %>% 
