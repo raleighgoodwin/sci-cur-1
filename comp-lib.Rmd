@@ -19,11 +19,13 @@ df_ml2 <- import(here("comp-data", "scicur-comp-lib2.csv")) %>%
   mutate(batch = "lib2")
 df_mc1 <- import(here("comp-data", "scicur-comp-con-071822-1548.csv")) %>% 
   mutate(batch = "con1")
-df_mc2 <- import(here("comp-data", "scicur-comp-con1-071922.csv")) %>% 
-  mutate(batch = "con2")
-df_q <- import(here("comp-data", "scicurQ-concomp-071922.csv"))
+# df_mc2 <- import(here("comp-data", "scicur-comp-con1-071922.csv")) %>% 
+#   mutate(batch = "con2")
+df_mc3 <- import(here("comp-data", "scicur-comp-con2-072522.csv")) %>% 
+  mutate(batch = "con3")
+df_q <- import(here("comp-data", "scicur-q-072522.csv"))
 
-df_m <- rbind(df_ml1, df_ml2, df_mc1, df_mc2)
+df_m <- rbind(df_ml1, df_ml2, df_mc1, df_mc3) 
 ```
 
 ```{r}
@@ -57,6 +59,6 @@ reject <- df_match %>%
 
 
 ```{r}
-mtchr(df_m, df_qc)
+matched <- mtchr(df_m, df_q, label_m = "batch", kill_switch = F)
 ```
 
