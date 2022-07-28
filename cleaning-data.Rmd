@@ -13,41 +13,46 @@ library(janitor)
 
 # Baseline Data
 ```{r}
+# mturk
 dfm_bp <- import(here("data", "baselinep-data.csv")) %>% 
   clean_names() %>% 
   rename(., "id" = "amazon_identifier") %>% 
-  mutate(batch = "basep")
+  mutate(batch = "basep") # import HIT 1
 
 dfm_b1 <- import(here("data", "baseline1-data.csv")) %>% 
   clean_names() %>% 
   rename(., "id" = "amazon_identifier") %>% 
-  mutate(batch = "base1")
+  mutate(batch = "base1") # import HIT 2
 
+# qualtrics
 dfq_b <- import(here("data", "qual-baseline-data.csv")) %>% 
-  clean_names()
+  clean_names() # import
 ```
 
+## MTurk
 ```{r}
-dfm_b <- rbind(dfm_bp, dfm_b1)
+dfm_b <- rbind(dfm_bp, dfm_b1) # bind HIT dfs
 ```
 
 ```{r}
 dfm_b_dup <- dfm_b %>% 
   group_by(id) %>% 
-  filter(n() > 1)
+  filter(n() > 1) # identify duplicates
 
 dfm_b_app <- dfm_b %>% 
-  filter(approval_status == "Approved")
+  filter(approval_status == "Approved") # identify approved HITs
 ```
 
+## Qualtrics
 ```{r}
 dfq_b1 <- dfq_b %>% 
-  filter(id %in% dfm_b$id & !id %in% dfm_b_dup$id)
+  filter(id %in% dfm_b$id & !id %in% dfm_b_dup$id) # filter out unapproved/
+# duplicate observations
 ```
 
 ```{r}
 dfq_b1 <- dfq_b1 %>% 
-  filter(finished == 1 & consent == 1)
+  filter(finished == 1 & consent == 1) # only finished and consenting obs
 ```
 
 ```{r}
@@ -62,10 +67,10 @@ for (i in 1:length(bcols)) {
 
 }
 
-colnames(dfq_b1) <- bcols1
+colnames(dfq_b1) <- bcols1 # change col names to indicate baseline
 
 dfq_b1 <- dfq_b1 %>% 
-  rename(., id = id_b)
+  rename(., id = id_b) # keep id the same for joining
 ```
 
 # Sci Cur Data
@@ -74,37 +79,37 @@ dfq_b1 <- dfq_b1 %>%
 dfm_con1 <- import(here("data", "mturk-data-con1.csv")) %>% 
   clean_names() %>% 
   rename(., "id" = "amazon_identifier") %>% 
-  mutate(batch = "con1")
+  mutate(batch = "con1") # import con HIT 1
 
 dfm_con2 <- import(here("data", "mturk-data-con2.csv")) %>% 
   clean_names() %>% 
   rename(., "id" = "amazon_identifier") %>% 
-  mutate(batch = "con2")
+  mutate(batch = "con2") # import con HIT 2
 
 dfm_lib1 <- import(here("data", "mturk-data-lib1.csv"))%>% 
   clean_names() %>% 
   rename(., "id" = "amazon_identifier") %>% 
-  mutate(batch = "lib1")
+  mutate(batch = "lib1") # import lib HIT 1
 
 dfm_lib2 <- import(here("data", "mturk-data-lib2.csv"))%>% 
   clean_names() %>% 
   rename(., "id" = "amazon_identifier") %>% 
-  mutate(batch = "lib2")
+  mutate(batch = "lib2") # import lib HIT 2
 
 # qualtrics
 dfq <- import(here("data", "qual-data.csv")) %>% 
-  clean_names()
+  clean_names() # import
 ```
 
-# MTurk Data
+# MTurk
 ```{r}
-dfm <- rbind(dfm_con1, dfm_con2, dfm_lib1, dfm_lib2)
+dfm <- rbind(dfm_con1, dfm_con2, dfm_lib1, dfm_lib2) # bind mturk data into 1 df
 ```
 
 ```{r}
 dfm_dup <- dfm %>% 
   group_by(id) %>% 
-  filter(n() > 1)
+  filter(n() > 1) # identify duplicates
 
 dfm_dup %>% 
   filter(approval_status == "Approved") %>% 
@@ -122,10 +127,10 @@ dup_id <- c("A3CZNWMYPM3P6E", "A2YC6PEMIRSOAA", "A2BK9RMC0NOIH8", "A2V27A9GZA1NR
 
 ```{r}
 dfm_app <- dfm %>% 
-  filter(approval_status == "Approved")
+  filter(approval_status == "Approved") # identify approved
 ```
 
-# Qualtrics Data
+# Qualtrics
 ```{r echo=F, eval=F}
 dfq_dup <- dfq %>% 
   filter(id %in% dup_id)
@@ -133,23 +138,25 @@ dfq_dup <- dfq %>%
 dfq_dup %>% 
   group_by(id) %>% 
   summarise(n = n()) %>% 
-  filter(n > 1)
+  filter(n > 1) # identify duplicates
 
-dfq_dup %>% 
-  filter(id == "A2IQ0QCTQ3KWLT" | id == "A2YC6PEMIRSOAA" | id == "A3F9IQB0297J9D") %>% 
-  select(start_date, end_date, id, finished, duration_in_seconds, consent1,
-         bad_resp, cheat) 
-
-dfq %>% 
-  filter(!id %in% dup_id & id %in% dfm_app$id)
+# dfq_dup %>% 
+#   filter(id == "A2IQ0QCTQ3KWLT" | id == "A2YC6PEMIRSOAA" | id == "A3F9IQB0297J9D") %>% 
+#   select(start_date, end_date, id, finished, duration_in_seconds, consent1,
+#          bad_resp, cheat)
+# 
+# dfq %>% 
+#   filter(!id %in% dup_id & id %in% dfm_app$id)
 ```
 
 ```{r}
 dfq1 <- dfq %>% 
   filter(!id %in% dup_id & finished == 1 & cheat == 3 & bad_resp == 1 &
-           consent1 == 1 & id %in% dfm_app$id)
+           consent1 == 1 & id %in% dfm_app$id) # exlude duplicates and 
+# Ss who reported cheating or responding randomly/while distracted, select
+# only finished and approved HITs
 
-# nEED TO CREATE A MISSINGNESS VARIABLE TO FILTER W -- LESS THAN 5%
+# nEED TO CREATE A MISSINGNESS VARIABLE TO FILTER W -- MORE THAN 5%****
 ```
 
 ```{r}
@@ -162,7 +169,7 @@ for (i in 1:length(cols)) {
   
   cols1[i] = paste(cols[i], "sc", sep = "_")
 
-}
+} # mark study 1 cols
 
 colnames(dfq1) <- cols1
 
@@ -170,7 +177,130 @@ dfq1 <- dfq1 %>%
   rename(., id = id_sc)
 ```
 
+# Join
 ```{r}
-df1 <- left_join(dfq1, dfq_b1, by = "id")
+df1 <- left_join(dfq1, dfq_b1, by = "id") # join baseline and study 1 q data
+```
+
+## Cleaning
+```{r}
+df2 <- df1 %>% # organize df cols
+  select(id, contains("duration_in_seconds"), contains("2_1_sc"), 
+         contains("news1"), contains("act"), contains("books"), contains("convo"),
+         contains("share_freq"), contains("read_article"), contains("topic_interest"), 
+         contains("1_1_sc"), contains("time_page_submit_sc"), 
+         contains("rav"), contains("cc_risk"), contains("ccr"),
+         contains("dem"), contains("start_date"), contains("end_date"), 
+         contains("finished"), contains("consent"), contains("open"), contains("fl_")
+         )
+```
+
+```{r}
+df2[2:169] <- lapply(df2[2:169], as.numeric)
+df2[171:176] <- lapply(df2[171:176], as.numeric)
+```
+
+### Scoring MR Task
+```{r}
+df3 <- df2 %>% 
+  mutate(arctic20 = dplyr::recode(arctic2_1_sc, `1` = 3,
+                           `2` = 2,
+                           `3` = 1,
+                           `4` = 0,
+                           `5` = -1,
+                           `6` = -2,
+                           `7` = -3),
+         temp20 = dplyr::recode(temp2_1_sc,`1` = -3,
+                           `2` = -2,
+                           `3` = -1,
+                           `4` = 0,
+                           `5` = 1,
+                           `6` = 2,
+                           `7` = 3),
+         ozone20 = dplyr::recode(ozone2_1_sc, `1` = 3,
+                           `2` = 2,
+                           `3` = 1,
+                           `4` = 0,
+                           `5` = -1,
+                           `6` = -2,
+                           `7` = -3),
+         airqual20 = dplyr::recode(air_qual2_1_sc, `1` = 3,
+                           `2` = 2,
+                           `3` = 1,
+                           `4` = 0,
+                           `5` = -1,
+                           `6` = -2,
+                           `7` = -3),
+         diatho20 = dplyr::recode(dia_tho2_1_sc, `1` = 3,
+                           `2` = 2,
+                           `3` = 1,
+                           `4` = 0,
+                           `5` = -1,
+                           `6` = -2,
+                           `7` = -3),
+         co220 = dplyr::recode(co22_1_sc, `1` = -3,
+                           `2` = -2,
+                           `3` = -1,
+                           `4` = 0,
+                           `5` = 1,
+                           `6` = 2,
+                           `7` = 3),
+         icesheets20 = dplyr::recode(ice_sheets2_1_sc, `1` = 3,
+                           `2` = 2,
+                           `3` = 1,
+                           `4` = 0,
+                           `5` = -1,
+                           `6` = -2,
+                           `7` = -3),
+         quake20 = if_else(quake2_1_sc == 0, 0, 1)
+         )
+```
+
+### Score Science Curiosity Scale
+```{r}
+df3 <- df3 %>% 
+  mutate(sc_likert = news1_2_sc + news1_6_sc + convo_2_sc + convo_10_sc +
+           topic_interest_3_sc + topic_interest_5_sc + topic_interest_8_sc,
+         sc_books = if_else(books_3_sc > 0, 1, 0),
+         sc_lecture = if_else(act10c1_2_sc > 0, 1, 0),
+         sc_scimu = if_else(act_scib_sc > 0, 1, 0),
+         sc_scimu_c19 = if_else(act_scic_sc > 0, 1, 0),
+         sc_read = if_else(read_article_sc == 2, 1, 0),
+         sc_share_yn = if_else(share_freq1_sc == 1, 0, 1),
+         sc_share_tech = recode(share_freq2_6_sc, `1` = 1,
+                                `2` = 2,
+                                `3` = 2,
+                                `4` = 2,
+                                `5` = 3,
+                                `6` = 3,
+                                `7` = 4,
+                                `8` = 4,
+                                `9` = 5,
+                                `10` = 5),
+         sc_share_sci = recode(share_freq2_11_sc, `1` = 1,
+                                `2` = 2,
+                                `3` = 2,
+                                `4` = 2,
+                                `5` = 3,
+                                `6` = 3,
+                                `7` = 4,
+                                `8` = 4,
+                                `9` = 5,
+                                `10` = 5)
+         )
+```
+
+```{r}
+df3 <- df3 %>% 
+  mutate(sc_score1 = sc_likert + sc_books + sc_lecture + sc_scimu + 
+           sc_scimu_c19 + sc_read,
+         sc_score2a = sc_share_tech + sc_share_sci,
+         sc_score2b = if_else(share_freq1_sc == 0, 0, sc_score2a),
+         sc_scored = sc_score1 + sc_score2b)
+```
+
+```{r}
+df3$sc_scored %>% 
+  psych::describe()
 ```
 
