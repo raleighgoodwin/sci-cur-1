@@ -60,5 +60,9 @@ reject <- df_match %>%
 
 ```{r}
 matched <- mtchr(df_m, df_q, label_m = "batch", kill_switch = F)
+
+matched %>% 
+  filter(batch == "con3") %>% 
+  unique()
 ```
 
