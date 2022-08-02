@@ -11,181 +11,15 @@ library(tidyverse)
 library(janitor)
 ```
 
-# Baseline Data
+# Import Joined Data (df1)
 ```{r}
-# mturk
-dfm_bp <- import(here("data", "baselinep-data.csv")) %>% 
-  clean_names() %>% 
-  rename(., "id" = "amazon_identifier") %>% 
-  mutate(batch = "basep") # import HIT 1
-
-dfm_b1 <- import(here("data", "baseline1-data.csv")) %>% 
-  clean_names() %>% 
-  rename(., "id" = "amazon_identifier") %>% 
-  mutate(batch = "base1") # import HIT 2
-
-# qualtrics
-dfq_b <- import(here("data", "qual-baseline-data.csv")) %>% 
-  clean_names() # import
+df1 <- import(here("prepped-data", "joined-data.csv"))
 ```
 
-## MTurk
-```{r}
-dfm_b <- rbind(dfm_bp, dfm_b1) # bind HIT dfs
-```
-
-```{r}
-dfm_b_dup <- dfm_b %>% 
-  group_by(id) %>% 
-  filter(n() > 1) # identify duplicates
-
-dfm_b_app <- dfm_b %>% 
-  filter(approval_status == "Approved") # identify approved HITs
-```
-
-## Qualtrics
-```{r}
-dfq_b1 <- dfq_b %>% 
-  filter(id %in% dfm_b$id & !id %in% dfm_b_dup$id) # filter out unapproved/
-# duplicate observations
-```
-
-```{r}
-dfq_b1 <- dfq_b1 %>% 
-  filter(finished == 1 & consent == 1) # only finished and consenting obs
-```
-
-```{r}
-bcols <- dfq_b1 %>% 
-  colnames()
-
-bcols1 <- rep(NA, length(bcols))
-
-for (i in 1:length(bcols)) {
-  
-  bcols1[i] = paste(bcols[i], "b", sep = "_")
-
-}
-
-colnames(dfq_b1) <- bcols1 # change col names to indicate baseline
-
-dfq_b1 <- dfq_b1 %>% 
-  rename(., id = id_b) # keep id the same for joining
-```
-
-# Sci Cur Data
-```{r}
-# mturk
-dfm_con1 <- import(here("data", "mturk-data-con1.csv")) %>% 
-  clean_names() %>% 
-  rename(., "id" = "amazon_identifier") %>% 
-  mutate(batch = "con1") # import con HIT 1
-
-dfm_con2 <- import(here("data", "mturk-data-con2.csv")) %>% 
-  clean_names() %>% 
-  rename(., "id" = "amazon_identifier") %>% 
-  mutate(batch = "con2") # import con HIT 2
-
-dfm_lib1 <- import(here("data", "mturk-data-lib1.csv"))%>% 
-  clean_names() %>% 
-  rename(., "id" = "amazon_identifier") %>% 
-  mutate(batch = "lib1") # import lib HIT 1
-
-dfm_lib2 <- import(here("data", "mturk-data-lib2.csv"))%>% 
-  clean_names() %>% 
-  rename(., "id" = "amazon_identifier") %>% 
-  mutate(batch = "lib2") # import lib HIT 2
-
-# qualtrics
-dfq <- import(here("data", "qual-data.csv")) %>% 
-  clean_names() # import
-```
-
-# MTurk
-```{r}
-dfm <- rbind(dfm_con1, dfm_con2, dfm_lib1, dfm_lib2) # bind mturk data into 1 df
-```
-
-```{r}
-dfm_dup <- dfm %>% 
-  group_by(id) %>% 
-  filter(n() > 1) # identify duplicates
-
-dfm_dup %>% 
-  filter(approval_status == "Approved") %>% 
-  select(id)
-
-dup_idall <- c("A3CZNWMYPM3P6E", "A2YC6PEMIRSOAA", "A2BK9RMC0NOIH8", "A2V27A9GZA1NR2",
-           "ARFQ8FJRKCUZ6", "A3F9IQB0297J9D", "ATTGD1M94GFR", "A2IQ0QCTQ3KWLT",
-           "A2YLK83DQ6PA5Y")
-
-dup_id <- c("A3CZNWMYPM3P6E", "A2YC6PEMIRSOAA", "A2BK9RMC0NOIH8", "A2V27A9GZA1NR2",
-           "ARFQ8FJRKCUZ6", "A3F9IQB0297J9D", "ATTGD1M94GFR", "A2YLK83DQ6PA5Y")
-# A2IQ0QCTQ3KWLT does have a duplicate but they accessed the survey for 19s
-# before exiting so they didn't go beyond the consent page
-```
-
-```{r}
-dfm_app <- dfm %>% 
-  filter(approval_status == "Approved") # identify approved
-```
-
-# Qualtrics
-```{r echo=F, eval=F}
-dfq_dup <- dfq %>% 
-  filter(id %in% dup_id)
-
-dfq_dup %>% 
-  group_by(id) %>% 
-  summarise(n = n()) %>% 
-  filter(n > 1) # identify duplicates
-
-# dfq_dup %>% 
-#   filter(id == "A2IQ0QCTQ3KWLT" | id == "A2YC6PEMIRSOAA" | id == "A3F9IQB0297J9D") %>% 
-#   select(start_date, end_date, id, finished, duration_in_seconds, consent1,
-#          bad_resp, cheat)
-# 
-# dfq %>% 
-#   filter(!id %in% dup_id & id %in% dfm_app$id)
-```
-
-```{r}
-dfq1 <- dfq %>% 
-  filter(!id %in% dup_id & finished == 1 & cheat == 3 & bad_resp == 1 &
-           consent1 == 1 & id %in% dfm_app$id) # exlude duplicates and 
-# Ss who reported cheating or responding randomly/while distracted, select
-# only finished and approved HITs
-
-# nEED TO CREATE A MISSINGNESS VARIABLE TO FILTER W -- MORE THAN 5%****
-```
-
-```{r}
-cols <- dfq1 %>% 
-  colnames()
-
-cols1 <- rep(NA, length(cols))
-
-for (i in 1:length(cols)) {
-  
-  cols1[i] = paste(cols[i], "sc", sep = "_")
-
-} # mark study 1 cols
-
-colnames(dfq1) <- cols1
-
-dfq1 <- dfq1 %>% 
-  rename(., id = id_sc)
-```
-
-# Join
-```{r}
-df1 <- left_join(dfq1, dfq_b1, by = "id") # join baseline and study 1 q data
-```
-
-## Cleaning
+# Cleaning (df2)
 ```{r}
 df2 <- df1 %>% # organize df cols
-  select(id, contains("duration_in_seconds"), contains("2_1_sc"), 
+  select(id, batch, contains("duration_in_seconds"), contains("2_1_sc"), 
          contains("news1"), contains("act"), contains("books"), contains("convo"),
          contains("share_freq"), contains("read_article"), contains("topic_interest"), 
          contains("1_1_sc"), contains("time_page_submit_sc"), 
@@ -196,11 +30,99 @@ df2 <- df1 %>% # organize df cols
 ```
 
 ```{r}
-df2[2:169] <- lapply(df2[2:169], as.numeric)
-df2[171:176] <- lapply(df2[171:176], as.numeric) # make numeric variables numeric
+df2[3:170] <- lapply(df2[3:170], as.numeric)
+df2[172:177] <- lapply(df2[172:177], as.numeric) # make numeric variables numeric
 ```
 
-### Scoring MR Task
+## Duration
+```{r}
+df2 <- df2 %>% 
+  mutate(duration_z = scale(duration_in_seconds_sc),
+         duration_ex = case_when(
+           duration_z >= 3 ~ "1",
+           duration_z <= -3 ~ "1",
+           TRUE ~ "0"
+         ))
+```
+
+## Political Ideology
+```{r}
+df2 <- df2 %>% 
+  mutate(conservatism = dem_annes_id_b, # 1 (ext L), 7 (ext C), 4 = mod
+         ideology_lean = dem_annes_id2_b, # 1 = R lean, 2 = neither, 4 = D lean
+         ideology_lean2 = case_when(
+           dem_annes_id2_b == 1 ~ 4.5,
+           dem_annes_id2_b == 2 ~ 4,
+           dem_annes_id2_b == 4 ~ 3.5,
+           TRUE ~ 999
+         ),
+         ideology_lean2 = ifelse(ideology_lean2 == 999, NA, ideology_lean2),
+         conservatism_f = ifelse(conservatism == 4, ideology_lean2, conservatism),
+         con = case_when(
+           conservatism_f > 4 ~ 1,
+           conservatism_f < 4 ~ -1,
+           conservatism_f == 4 ~ 0,
+           TRUE ~ 999
+         ),
+         con = ifelse(con == 999, NA, con),
+         party = dem_annes_party_b, # 1 = D, 2 = R, 3 = Indep, 4 = other
+         party_str = dem_annes_party_str_b, # 1 = strong, 2 = not very strong
+         party_lean = dem_annes_party_lean_b) 
+
+# df2 %>% 
+#   filter(conservatism != 4 & is.na(ideology_lean2) == F) # this works
+```
+
+```{r}
+# make sure batch and ideology match -- it doesn't!
+df2 <- df2 %>% 
+  mutate(batchcon = case_when(
+    batch == "con1" ~ 1,
+    batch == "con2" ~ 1,
+    batch == "lib1" ~ -1,
+    batch == "lib2" ~ -1,
+    TRUE ~ 999
+    ),
+    batchcon = ifelse(batchcon == 999, NA, batchcon)
+  )
+
+df2 %>% 
+  filter(is.na(con) == T)
+
+df2_picheck <- df2 %>% 
+  select(id, con, batchcon) %>% 
+  mutate(batchmatch = ifelse(con == batchcon, 1, 0))
+
+df2_picheck %>% 
+  filter(batchmatch == 0)
+```
+
+```{r}
+df2 %>% 
+  group_by(con) %>% 
+  summarise(n = n()) # Ncon = 227, Nmod = 52, Nlib = 266
+```
+
+## Demographics
+```{r}
+# gender: dem_gender (_1 = man, _2 = nb, _5 = woman, _3 = other, 
+# _4 = prefer not to answer)
+
+# race: dem_race (_1 = white/caucasian, _2 = black/african american,
+# _3 = hispanic, _4 = asian, _5 = native hawaiian/pacific islander,
+# _6 = american indian, _7 = eskimo aleut, _8 = other, _9 = prefer not to answer)
+
+# native english speaker: dem_lang (1 = yes, 2 = no)
+
+# edu: dem_ed (_1 = <hs, _2 = some hs, _3 = hs/ged, _4 = 2yr college,
+# _5 = 4yr college, _6 = masters, _7 = doctoral)
+
+# income: dem_inc (_1 = <10k, _2 = 10-20k, _3 = 20-30k, (...), _11 = 100-150k,
+# _12 = 150-200k, _13 = 200-250k, _14 > 250k)
+```
+
+# Scoring/Recoding
+## MR Task (df3)
 ```{r}
 df3 <- df2 %>% 
   mutate(arctic20 = dplyr::recode(arctic2_1_sc, `1` = 3,
@@ -210,7 +132,7 @@ df3 <- df2 %>%
                            `5` = -1,
                            `6` = -2,
                            `7` = -3),
-         arctic20_s = scale(arctic20),
+         arctic20z = scale(arctic20),
          temp20 = dplyr::recode(temp2_1_sc,`1` = -3,
                            `2` = -2,
                            `3` = -1,
@@ -218,15 +140,15 @@ df3 <- df2 %>%
                            `5` = 1,
                            `6` = 2,
                            `7` = 3),
-         temp20_s = scale(temp20),
+         temp20z = scale(temp20),
          ozone20 = dplyr::recode(ozone2_1_sc, `1` = 3,
                            `2` = 2,
                            `3` = 1,
-                           `4` = 0,
+                           `4` = 0,   
                            `5` = -1,
                            `6` = -2,
                            `7` = -3),
-         ozone20_s = scale(ozone20),
+         ozone20z = scale(ozone20),
          airqual20 = dplyr::recode(air_qual2_1_sc, `1` = 3,
                            `2` = 2,
                            `3` = 1,
@@ -234,7 +156,7 @@ df3 <- df2 %>%
                            `5` = -1,
                            `6` = -2,
                            `7` = -3),
-         airqual20_s = scale(airqual20),
+         airqual20z = scale(airqual20),
          diatho20 = dplyr::recode(dia_tho2_1_sc, `1` = 3,
                            `2` = 2,
                            `3` = 1,
@@ -242,7 +164,7 @@ df3 <- df2 %>%
                            `5` = -1,
                            `6` = -2,
                            `7` = -3),
-         diatho20_s = scale(diatho20),
+         diatho20z = scale(diatho20),
          co220 = dplyr::recode(co22_1_sc, `1` = -3,
                            `2` = -2,
                            `3` = -1,
@@ -250,7 +172,7 @@ df3 <- df2 %>%
                            `5` = 1,
                            `6` = 2,
                            `7` = 3),
-         co220_s = scale(co220),
+         co220z = scale(co220),
          icesheets20 = dplyr::recode(ice_sheets2_1_sc, `1` = 3,
                            `2` = 2,
                            `3` = 1,
@@ -258,7 +180,7 @@ df3 <- df2 %>%
                            `5` = -1,
                            `6` = -2,
                            `7` = -3),
-         icesheets20_s = scale(icesheets20),
+         icesheets20z = scale(icesheets20),
          quake20 = if_else(quake2_1_sc == 0, 0, 1)
          )
 ```
@@ -266,23 +188,68 @@ df3 <- df2 %>%
 ```{r}
 df3 <- df3 %>% 
   mutate(n_plot_score = diatho20 + co220 + icesheets20,
+         n_plot_score_z = scale(n_plot_score),
          nq_plot_score = n_plot_score + quake20, 
+         nq_plot_score_z = scale(nq_plot_score),
          con_plot = arctic20 + temp20,
-         lib_plot = ozone20 + airqual20)
+         con_plot_z = scale(con_plot),
+         lib_plot = ozone20 + airqual20,
+         lib_plot_z = scale(lib_plot))
+
+df3 <- df3 %>% 
+  mutate(bad_plot_score = ifelse(n_plot_score_z <= -3, 1, 0),
+         bad_plot_score_q = ifelse(nq_plot_score_z <= -3, 1, 0)
+         )
 ```
 
-### Score Science Curiosity Scale
 ```{r}
-df3 <- df3 %>% # recode as indicated by Kahan et al 2017
+# df3 %>% 
+#   select(contains("plot_z")) %>% 
+#   psych::describe()
+
+df3 %>%
+  select(contains("annes")) %>%
+  filter(is.na(dem_annes_id_b) == T) %>%
+  nrow()
+```
+
+### Poor Plot Performance
+```{r eval=F, echo=F}
+df3 %>% 
+  select(contains("bad_plot_score")) %>% 
+  psych::describe()
+
+df3$bad_plot_score == df3$bad_plot_score_q
+```
+
+### Practice Attention Check
+```{r}
+df3 <- df3 %>% 
+  mutate(attn_check = if_else(prac2_1_sc == 6, 1, 0),
+         attn_check_12 = if_else(prac1_1_sc == prac2_1_sc, 1, 0))
+```
+
+## Score IMRI
+```{r}
+
+```
+
+## Score Science Curiosity Scale (df4)
+```{r}
+df4 <- df3 %>% # recode as indicated by Kahan et al 2017
   mutate(sc_likert = news1_2_sc + news1_6_sc + convo_2_sc + convo_10_sc +
            topic_interest_3_sc + topic_interest_5_sc + topic_interest_8_sc,
-         sc_books = if_else(books_3_sc > 0, 1, 0),
-         sc_lecture = if_else(act10c1_2_sc > 0, 1, 0),
+         sc_books = as.numeric(case_when(
+           books_3_sc > 0 ~ "1",
+           is.na(books_3_sc) == T ~ "0")),
+         sc_lecture = as.numeric(case_when(
+           act10c1_2_sc > 0 ~ "1",
+           is.na(act10c1_2_sc) == T ~ "0")),
          sc_scimu = if_else(act_scib_sc > 0, 1, 0),
          sc_scimu_c19 = if_else(act_scic_sc > 0, 1, 0),
          sc_read = if_else(read_article_sc == 2, 1, 0),
          sc_share_yn = if_else(share_freq1_sc == 1, 0, 1),
-         sc_share_tech = recode(share_freq2_6_sc, `1` = 1,
+         sc_share_tech_na = recode(share_freq2_6_sc, `1` = 1,
                                 `2` = 2,
                                 `3` = 2,
                                 `4` = 2,
@@ -292,7 +259,8 @@ df3 <- df3 %>% # recode as indicated by Kahan et al 2017
                                 `8` = 4,
                                 `9` = 5,
                                 `10` = 5),
-         sc_share_sci = recode(share_freq2_11_sc, `1` = 1,
+         sc_share_tech = ifelse(is.na(sc_share_tech_na) == T, 0, sc_share_tech_na),
+         sc_share_sci_na = recode(share_freq2_11_sc, `1` = 1,
                                 `2` = 2,
                                 `3` = 2,
                                 `4` = 2,
@@ -301,28 +269,70 @@ df3 <- df3 %>% # recode as indicated by Kahan et al 2017
                                 `7` = 4,
                                 `8` = 4,
                                 `9` = 5,
-                                `10` = 5)
+                                `10` = 5),
+         sc_share_sci = ifelse(is.na(sc_share_sci_na) == T, 0, sc_share_sci_na)
          )
 ```
 
 ```{r}
-df3 <- df3 %>% # score sci cur
+df4 %>% 
+  select(contains("sc_"))
+```
+
+```{r}
+df4 <- df4 %>% # score sci cur
   mutate(sc_score1 = sc_likert + sc_books + sc_lecture + sc_scimu + 
            sc_scimu_c19 + sc_read,
          sc_score2a = sc_share_tech + sc_share_sci,
          sc_score2b = if_else(share_freq1_sc == 0, 0, sc_score2a),
          sc_scored = sc_score1 + sc_score2b,
-         sc_scoredz = scale(sc_scored))
+         sc_scoredz = scale(sc_scored)) # z score
 
 ```
 
 ```{r}
-df3$sc_scored %>% 
+df4$sc_scored %>% 
   psych::describe()
 ```
-
-### 
+## Score RPM (df5)
 ```{r}
+df5 <- df4 %>% 
+  mutate(rav_scored = ravens1_b + ravens2_b + ravens3_b + ravens4_b + ravens5_b +
+           ravens6_b + ravens7_b + ravens8_b + ravens9_b + ravens10_b,
+         rav_scoredz = scale(rav_scored))
 
+df5 %>% 
+  select(contains("rav"))
+
+df5 %>% 
+  filter(is.na(rav_scored) == T) %>% 
+  nrow()
 ```
 
+```{r echo=F, eval=F}
+rav_cols <- df5 %>% 
+  select(contains("ravens"), -contains("click"), -contains("submit")) %>% 
+  colnames()
+
+rav_cols1 <- rep(NA, length(rav_cols))
+
+for (i in 1:length(rav_cols)) {
+  
+  rav_cols1[i] = paste(cols[i], "sc", sep = "_")
+
+} # change name of raven cols (not done!)
+
+# colnames(dfq1) <- cols1
+# 
+# dfq1 <- dfq1 %>% 
+#   rename(., id = id_sc)
+```
+
+# Exclude (df6)
+```{r}
+df6 <- df5 %>% 
+  filter(duration_ex != 1 & bad_plot_score != 1)
+
+df6attn <- df5 %>% 
+  filter(attn_check != 1) # basically not feasible bc it's so many ppl
+```
