@@ -1,0 +1,104 @@
+---
+title: "mlm-test"
+output: html_document
+---
+# Libraries
+```{r}
+library(rio)
+library(tidyverse)
+library(here)
+```
+
+# Data
+```{r}
+dfm <- import(here("data", "scicur-comp-lib2.csv")) %>% 
+  janitor::clean_names() %>% 
+  rename(., "id" = "amazon_identifier") %>% 
+  select(id, approval_status, duration_in_seconds)
+dfq <- import(here("data", "scicur-q-0725test.csv")) %>% 
+  janitor::clean_names()
+
+df <- left_join(dfm, dfq, b = "id") %>% 
+  mutate(prac2_1 = as.numeric(prac2_1),
+         cheat == as.numeric(cheat),
+         bad_resp = as.numeric(bad_resp)) 
+
+df1 <- df %>% 
+  filter(progress == 100 & approval_status == "Pending" & prac2_1 == 6 &
+           cheat == 3, bad_resp == 1)
+
+df1 <- df[sample(nrow(df), 50),]
+
+df2 <- df1 %>% 
+  select(contains("1_1"), contains("2_1"), cc_risk, news1_2, news1_6, contains("ActSci"),
+         contains("Act10"), books_3, convo_2, convo_10, contains("share_freq"), 
+         read_article, topic_interest_3, topic_interest_5, topic_interest_8, 
+         contains("open"), contains("studying"), cheat, bad_resp, contains("fl_"))
+
+df2[1:60] <- lapply(df2[1:60], as.numeric)
+
+
+
+```
+
+```{r}
+recodingplots_up <- function(df, new, old) {
+  mutate(df, new = dplyr::recode(df$old, `1` = 3,
+                           `2` = 2,
+                           `3` = 1,
+                           `4` = 0,
+                           `5` = -1,
+                           `6` = -2,
+                           `7` = -3))
+}
+
+recodingplots_down <- function(df, new, old) {
+  mutate(df, new = recode(df$old, `1` = -3,
+                           `2` = -2,
+                           `3` = -1,
+                           `4` = 0,
+                           `5` = 1,
+                           `6` = 2,
+                           `7` = 3))
+}
+```
+
+```{r}
+df2 %>% 
+  filter(is.na(arctic2_1) == F) %>% 
+  recodingplots_up(arctic20, arctic2_1)
+
+df2 <- df2 %>% 
+  mutate(arctic20 = recodingplots_up(arctic20, arctic2_1),
+         temp20 = recodingplots_down(temp20, temp2_1),
+         ozone20 = recodingplots_up(ozone20, ozone2_1),
+         airqual20 = recodingplots_up(airqual20, air_qual2_1),
+         diatho20 = recodingplots_up(diatho20, dia_tho2_1),
+         co220 = recodingplots_down(co220, co22_1),
+         icesheets20 = recodingplots_up(icesheets20, ice_sheets2_1),
+         )
+
+df2 <- df2 %>%
+  mutate(arctic20 = dplyr::recode(arctic2_1, `1` = 3,
+                           `2` = 2,
+                           `3` = 1,
+                           `4` = 0,
+                           `5` = -1,
+                           `6` = -2,
+                           `7` = -3),
+         temp20 = 
+         )
+```
+
+```{r}
+df2 %>% 
+  mutate(arctic20 = dplyr::recode(arctic2_1, `1` = 3,
+                           `2` = 2,
+                           `3` = 1,
+                           `4` = 0,
+                           `5` = -1,
+                           `6` = -2,
+                           `7` = -3)) %>%
+  select(arctic20)
+```
+

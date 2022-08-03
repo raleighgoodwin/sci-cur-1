@@ -1,0 +1,491 @@
+---
+title: 'Lab 9: Multi-Level Modelling'
+author: "Raleigh Goodwin"
+date: "May 29, 2020"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+Today we'll be reviewing Multi-level modeling, and covering how to run MLMs in R. Across the examples today we'll be working with the NELS-88 dataset that Elliot worked with in class. Let's start by reading in that dataset.
+
+# Data & Libraries
+## Importing & Cleaning Data
+
+We'll import the data, check its structure, and then do any necessary cleaning.
+```{r}
+library(rio)
+library(tidyverse)
+
+nels_88 <- import("613_Lab09_NELS88.sav") %>% 
+  factorize() %>% 
+  janitor::clean_names()
+
+str(nels_88)
+```
+
+Looks like our two ID variables (`schoolid` & `studentid`) are being read in as a numeric variable instead of a factor. We'll change those now to avoid any errors down the road.
+
+```{r}
+nels_88 <- nels_88 %>% 
+  mutate(schoolid = factor(schoolid),
+         studentid = factor(studentid))
+```
+
+
+# Precursors to MLM
+
+Multi-level data are data which are clustered in some way. Some examples might include:
+
+* Students in schools
+     * schools in (school) districts, or school districts in States
+* observations nested in an individual (i.e., repeated measures) 
+* individuals nested in groups in an experiment
+* individuals nested in dyads
+
+We usually refer to the lower level units (e.g., students) as *Level 1* and the higher level units (e.g., schools) as *Level 2*. Before getting into MLM proper, we'll start by going through some of the precursors.
+
+## Disaggregation vs. Aggregation
+
+One approach to multi-level data is to just work with the data at Level 1 or Level 2, which are called disaggregation and aggregation respectively.
+
+Disaggregation                    | Aggregation
+----------------------------------|--------------------------------
+ Ignores Group-level Data         | Ignores Individual-Level Data
+ (discards b/w group variability) | (discards w/i group variability)
+ increases Type I Error rate      | increases Type II Error rate
+ 
+
+### Disaggregation
+
+**Disaggregation:** Estimate a disaggregated model predicting math achievement from time spent on math homework each week. Since disaggregation ignores group-level data, we will not use the schoolid variable in our regression model.
+
+```{r}
+disag_model_1 <- lm(mathscore ~ timeonmath, data = nels_88)
+summary(disag_model_1)
+```
+
+>Q: What do the results suggest?    
+
+A: Each increase in unit of time on math results in a 3.57 increase in math score.
+
+>Q: What is the problem with conducting the analysis in this manner?
+
+A:  We are ignoring schools groupings, so we might be inflating our df's and therefore deflating SE, downwardly biasing it, so more Type I Error rate than we'd like.
+
+
+### Aggregation
+
+**Aggregation:**  Estimate an aggregated model predicting mean math achievement from mean hours spent on homework each week. Since aggregation ignores individual-level data, we need to compute the mean math score and the mean time spent on math homework for each of the 10 schools. We will do this in the `tidyverse` by using `group_by()` and `summarize()` from the `dplyr` library.
+
+```{r}
+nels_88_agg <- nels_88 %>% 
+  group_by(schoolid) %>% 
+  summarize(m_mathscore = mean(mathscore, na.rm = TRUE), # creating means for each school
+            m_timeonmath = mean(timeonmath, na.rm = TRUE)) 
+```
+
+And then we just run the regression with these new variables in our new dataset.
+
+```{r}
+agg_model_1 <- lm(m_mathscore ~ m_timeonmath, data = nels_88_agg)
+summary(agg_model_1) # regress means for score on means for time on hw
+```
+
+>Q: What do the results suggest?     
+
+A:  Intercept (average math score for a school whose average time on math is zero) decreased and slope increased (average increase in math school is 4.98 for every one unit increase in average time spent on homework). 
+
+>Q: What is the problem with conducting the analysis in this manner?    
+
+A: Can't say anything about the students. Violated assumption of independence of observations. If we aggregate, we lose information.
+
+## Examining Variability in Intercepts and Slopes
+
+It can be useful to visualize our data to see if they vary in slopes, intercepts, or both. We have a few options for visualizing this in ggplot, and your choice might depend on things like how many groups you have.
+
+First, we can use `facet_wrap()` to generate a separate plot for each school:
+
+```{r}
+ggplot(data = nels_88, aes(x = timeonmath, y = mathscore)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) + # tell ggplot to conduct a lm
+  facet_wrap(~ schoolid) + # don't forget the ~
+  theme_minimal() # I like this theme; totally optional
+```
+
+A second option is to plot them all on a single plot, and color code lines and points by school. In some ways, this is even easier (better if you have tons of groups); we can do this by using the `color` aesthetic.
+
+```{r}
+ggplot(data = nels_88, aes(x = timeonmath, y = mathscore, color = schoolid)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) + # tell ggplot to conduct a lm
+  theme_minimal()
+```
+
+>Q: Does it look like there might be between-school variability in the intercepts, slopes (for time spent on math), or both?   
+
+A: Yes! Both. This is why both of the beforementioned approaches are problematic. There's so many different things going on that parsing the data both of those ways will lose information. 
+
+## (Two-Part) Slopes & Intercepts as Outcomes
+
+One option that Elliot mentioned in class yesterday is to basically run a two-stage analysis. First, we assess the extent to which intercepts and slopes vary (between schools in this case), and then we save those parameters and use them as outcomes in the next part 
+
+### Part 1: Assessing Variability & Running OLS in each group
+
+#### Step 1: Dummy Code (if necessary)
+
+Since we will now include a categorical variable (to mark the groups) in our regression model, we need to create either dummy variables or make sure it is a factor in R and allow R to do the dummy coding. We already made sure school id was a factor above, and we don't have any particular school that should be the reference group, so we'll let R do our dummy coding for us. *Note: you should always think about whether and how to code a categorical variable when including them in a regression.*
+
+#### Step 2: Assess Between Group Variability in Intercepts
+
+Next we'll check if schools differ in their intercepts by including `schoolid` in the model and see if it improves the model's fit.
+
+In other words, we'll compare the following models:
+
+$$Model 1: MathAch = b_0 + b_1TimeOnMath$$
+$$Model 2: MathAch = b_0 + b_1TimeOnMath + b_2DC_1 + ... + b_9D_9$$
+
+```{r}
+disag_model_2 <- lm(mathscore ~ timeonmath + schoolid, data = nels_88)
+anova(disag_model_1,
+      disag_model_2)
+```
+
+>Q:  Looking at the tables below, do we have a main effect of our grouping variable (i.e., school)?  In other words, is the change in R squared significant? 
+
+A:  Yes
+
+>Q: What is another name for this model?    
+
+A:  Ancova model
+
+This is how we assess if there is variability in the intercept and the answer is yes there is
+
+#### Step 3: Assess Variability in Slope 
+
+Next we'll want to determine if there is variability school-to-school in the effect of time spent on math homework on math achievement scores. We are comparing this to the model with the dummy codes. We'll do this by including the interaction between `schoolid` and `timeonmath`. We'll be comparing the following models:
+
+$$Model 2: MathAch = b_0 + b_1TimeOnMath + b_2DC_1 + ... + b_{10}D_9$$
+
+$$Model 3: MathAch = b_0 + b_1TimeOnMath + b_2DC_1 + ... + b_{10}D_9 + b_{11}D_1*Time + ... + b_{19}D_9*Time$$
+
+```{r}
+disag_model_3 <- lm(mathscore ~ timeonmath*schoolid,
+                    data = nels_88)
+
+anova(disag_model_2,
+      disag_model_3)
+```
+
+Now we know that there is significant between-school variance in both the intercepts and the slopes and can try to predict this variance. To do this, we need to find the unique intercept and slope for each of the 10 schools. 
+
+#### Step 4: Get an Intercept & Slope for each School
+
+##### Getting Intercepts and slopes by hand
+
+We can calculate the slope and intercept for each school by hand from this model's coefficients.
+
+```{r}
+summary(disag_model_3)
+```
+
+>Q: What is the unique intercept for school 7930?   
+
+A: 50.68-11.93=38.75
+
+>Q: What is the unique slope for school 7930?
+
+A: -3.55+11.46=8ish (slope for timeonmath + int slope with that school)
+
+    
+>Q: What is the unique intercept for school 7472?
+
+A: etc
+
+   
+
+>Q:  What is the unique slope for school 7472?
+
+A:
+
+ 
+
+Now we could do this all day and enter them one at a time by hand, but that would be difficult and probably lead to an error or 2. So we should probably do it in R, which is much easier and less likely to lead to an error.
+
+##### Getting intercepts and Slopes in R
+
+Remember that what we want to end up with is a dataframe with a row per school and at least 3 columns:
+
+1. schoolid
+2. intercept estimates
+3. slope estimates
+
+In addition to these three variables, we'd want some predictor(s). In this case, we'll use `schooltype`, which is a code for whether schools are public or private (in the nels88 data). We'll start by getting the df with just the first three columns and then add in the predictor variable.
+
+The code we'll use is admittedly a little complicated at first glance, but basically all we're doing is:
+
+1. splitting the df into a df per school
+2. regressing mathscore on timeonmath in each df
+3. returning a df of coefficients (one intercept and one slope per school)
+4. labelling the intercept and slope
+5. Tidying the data by:
+    1. Turning schoolid back into a column (currently spread across the data as column names)
+    2. Spreading the coefficients so that we have separate columns for the intercept and slope.
+
+```{r}
+ints_slopes <- nels_88 %>% 
+  split(.$schoolid) %>% # split dataframe (df) into list of dfs, one per school
+  map(~ lm(mathscore ~ timeonmath, data = .)) %>% # run OLS predicting score from time (map takes a func and applies it to each object in a list) (::purrr)
+  map_dfc("coefficients") %>% # get coefficients for each in a df (returns as df and puts each list as column)
+  cbind(term = c("intercept", "b_timeonmath"), .) %>% # identify the row with intercept and slope
+  gather(schoolid, estimate, -term) %>% # gather
+  spread(term, estimate)     # spread so we have a row per school, 
+                             # and a column for int and slope
+
+ints_slopes
+```
+
+### Part 2: Slopes and Intercepts as outcomes
+
+#### Step 1: Create Dataset with Slopes, Intercepts, and Group-level Predictors
+
+Now we just need to add the `schooltype` column from the `nels_88` dataframe. We can use one of the `join` functions from the `dplyr` library. This will use the schoolid variable as the *key* to match up the data from the two dataframes.
+
+First, though, we'll select just the schoolid and schooltype variables from nels_88 since that is all we need now. The last thing we'll do is run `distinct()` on it to remove the repeats; without this, there would be a row per student and we just want a row per school.
+
+```{r}
+ints_slopes <- nels_88 %>% # start with nels data
+  select(schoolid, schooltype) %>% # select just schoolid (for matching) & schooltype
+  left_join(ints_slopes) %>%  # left join (keep everything on the left, can use to filter out unshared cases)
+  distinct() # get just distinct (not repeated) rows
+ints_slopes
+```
+
+#### Regress Intercepts on Predictor(s)
+
+Now we can if private and public schools have different intercepts by regressing the intercepts on the schooltype predictor variable.
+
+```{r}
+ints_model <- lm(intercept ~ schooltype, data = ints_slopes)
+summary(ints_model)
+```
+
+>Q:  What is the regression equation predicting intercept from school type?    
+
+A: 
+
+>Q: What does the intercept mean?    
+
+A: Intercept for private schools
+
+>Q:  What does the slope for schooltype mean (using the number in your answer)?    
+
+A:  Difference in intercept for school type; intercept for public school is 16 pts lower than private school
+
+>Q: What are the expected intercepts for private and public schools?    
+
+A: private: 59, public: 43
+
+#### Regress Slope on Predictor(s)
+
+Now we can see if private and public schools have different slopes for time spent on math by regressing that slope on the schooltype predictor variable.
+
+```{r}
+ints_model <- lm(b_timeonmath ~ schooltype, data = ints_slopes)
+summary(ints_model)
+```
+
+>Q:  What is the regression equation predicting the slope from school type?    
+
+A:     
+
+>Q: What does the intercept mean?    
+
+A: Slope value for private schools
+
+>Q:  What does the slope for schooltype mean (using the number in your answer)?    
+
+A: Difference in slope btwn public and private schools
+
+>Q: What are the expected slopes for private and public schools?    
+
+A: private: 1, public: 2
+
+>Q: Is the relationship between time spent on math HW and math score different in private vs. public schools?
+
+A: No. The p-values here are not significant, so difference is not statistically different. (This is the issue of running a model with 10 cases; 8 df is not very powerful.)
+
+We could visualize this in ggplot by mapping the color aesthetic onto schooltype, like so:
+
+```{r}
+ggplot(data = nels_88, aes(x = timeonmath, y = mathscore, 
+                           color = schooltype, group = schoolid)) + # group=schoolid is important here
+  geom_point() + 
+  geom_smooth(method = "lm", se = FALSE) + 
+  theme_minimal()
+```
+
+So it looks like we had just 1 private school, so this analysis is not a very good test of public vs. private school differences. Explains why the model above was so not significant. Terribly powered.
+
+# Random Coefficients Regression: "Full" MLM
+
+## Conceptual Review
+
+Now we'll run a "full" random coefficients regression. In RCR, every L1 coefficient (the betas) is allowed to vary randomly at the group level (L2). 
+
+### Notation
+
+#### Multiple Equation Form:
+
+L1: 	
+
+$$Y_{ij} = b_{0j} + b_{1j}time_{ij} + e_{ij}$$
+
+L2 (g is gamma): 	
+
+$$b_{0j} = g_{00} + g_{01}type_j + u_{0j}$$
+$$b_{1j} = g_{10} + g_{11}type_j + u_{1j}$$
+
+#### Single Equation Form
+
+$$Y_{ij} = g_{00} + g_{01}type_j + g_{10}time_{ij} + g_{11}time_{ij}*type_j + (u_{0j} + u_{1j}time_{ij} + e_{ij})$$
+
+What is the meaning of each parameter?
+
+$g_{00}$ = *expected MathScore when time spent on HW = 0 for students in public schools (when type = 0); "overall intercept"*
+				
+$g_{01}$ = *main effect of L2 predictor (type); difference in intercept for private vs. public; difference between expected MathScore when time spent on HW=0 for people in public schools versus private schools *
+				
+$u_{0j}$ = *random error for the intercept. In random coefficient regression, we estimate var(u0)=tau00 Since we have a L2 predictor, this tells us how much residual (school-to-school) variance there is in the intercepts after accounting for the effect of our L2 predictor. If we're doing a good job explaining variance this will be low (might have reduced for example after adding school).*
+
+$g_{10}$ = *In other words, the main effect of time spent on HW when Type=0. If your L2 variable were continuous, this would still be the main effect of time spent on HW when your L2 variable=0. In this case, it is expected increase in MathScore for each 1 unit increase in time spent on HW for private schools.*
+
+$g_{11}$ = *effect of Type on the relationship between MathScore and time spent on HW (cross-level interaction). In other words, the effect of being in a private or public school on the slope predicting MathScore from Time spent on HW (effect of school type on the relationship between time and score)*
+
+$u_{1j}$ = *random error for the slope. In random coefficient regression, we estimate* $var(u_{1j}) = \tau_{11}$. *Since we have a L2 predictor for the slope, var(u1j) is how much residual variance there is in the slopes after taking into account our L2 predictor. *
+
+$e_{ij}$ = *residual variance at the individual level (error)--how much does student differ from predicted score*
+
+>Q: What if you found that the slopes did NOT vary randomly across groups? How would that model be different?
+
+A: *In this model, since we have a L2 predictor for our slope equation, that would mean the random variance in slopes is completely explained by our L2 predictor. This means that the slope for all private schools is the same and the slope for all public schools is the same. When u1j is in our model, that means that the effect of being public or private on slopes can vary from school to school. So, this would mean that u1j = 0.*
+
+## MLM in R
+
+We'll be using `lmer` from the `lme4` library to run the Random Coefficients Regression. Y'all might recall running some `lmer` models for random effects anova in 612, and you'll hopefully recognize the syntax.
+
+### NULL Model & ICC
+
+First, it's common to estimate a NULL model (i.e., a model with just a fixed and random intercept). This can be used as a baseline in model comparisons and, maybe more importantly, can be used to get the ICC.
+
+>Q: What does the intercept only equation look like?
+
+A: see below
+
+$$L1: Y_{ij} = b_{0j} + e_{ij}$$
+$$L2: 	b_{0j} = g_{00} + u_{0j}$$
+
+Remember, in `lme4` we use the `lm()` syntax, but add the `| GROUP` syntax to specify random effects. So, for the intercept only, we do this:
+
+```{r}
+library(lme4)
+rcr_0 <- lmer(mathscore ~ 1 + (1 | schoolid), # how you specify random effects in lmer: 
+                                            #(which coefficient you want a random effect for|grouping factor)
+              data = nels_88)
+summary(rcr_0)
+
+# more about specifying random effects:
+# (coefficient | lower level unit / higher level unit) <- if you're doing multiple levels of nesting so like (1 | school / district)
+# also you can add them together for two independent random effects; example:
+# + (1 | schoolid) + (1 | neighborhood)
+```
+
+>Q: How can we calculate the ICC from this output?    
+
+A: 34 / (34+72) AKA btwn variance / total variance
+
+
+>Q: What does this mean?    
+
+A: Amount of between school variability; portion of variance explained by school. Also used as an index of nesting. Even low ICC values can increase Type I Error rates significantly if you're ignoring nesting. Also can be useful if you just want to know where the bulk of variability is, can help you know what to target in interventions or something when it comes to policy applications.
+
+#### Calculating ICC in R
+
+We can calculate this in R by running VarCorr on the model, which provides the random effects parameters as variance-covariances (and SD-Correlations). We'll do that and a little data manipulation to calculate ICC.
+
+```{r}
+#"broom.mixed" package does this so you don't have to do it by hand (like below)
+icc <- rcr_0 %>% 
+  VarCorr() %>% # get random effects (Var corr matrix)
+  as_tibble() %>% # turn into a tibble
+  select(grp, vcov) %>% # select the grp (label) and vcov (variance)
+  spread(grp, vcov) %>% # spread them out into columns
+  transmute(icc = schoolid / (schoolid + Residual)) %>% # calculate ICC
+  as.numeric()
+
+icc # this doesn't do sig testing bc this is currently under debate
+```
+
+Now we'll look at the full model.
+
+### Full Model
+
+Let's predict mathscores from time spent on math homework, school type (private vs. public), and the cross-level interaction between these variables.
+
+```{r}
+library(lmerTest) # this is a way to test it; currently a good method but still up for debate
+rcr_1 <-  lmer(mathscore ~ 1 + timeonmath*schooltype + (1 + timeonmath | schoolid),
+              data = nels_88)
+summary(rcr_1) # that library also has diff df methods you can use
+```
+
+>Q: What is the regression equation?   
+
+A:
+
+$$Y_{ij} = g_{00} + g_{01}type_j + g_{10}time_{ij} + g_{11}time_{ij}*type_j + (u_{0j} + u_{1j}time_{ij} + e_{ij})$$
+
+$$Y_{ij} = 59.21 - 15.97 (type) + 1.09 (time) + 0.95 (time*type) + error$$
+
+>Q: What does the fixed effects (including the intercept) mean?     
+
+A: INTERCEPT--Expected score in timeonmath for a student who spends zero time on math hw and is in the reference grp (private school); instead of it being for a student or school where XYZ is true, it's for a student where (this) is true in a school where (this) is true (where "this" is basically stg = 0)
+
+>Q: What about the random effects?     
+
+A: SCHOOL FOR TIMEONMATH (27.27)--Spread across schools for the time on math slope. We are now in a world where the slopes take on a range of values instead of a single value. The values range b/c of schools.
+Fixed effects slope is like the average slope (for reference grp -- b/c we have the interaction, we have to condition that on the ref grp) and the random effects shows the variance for the slope (for everything).
+
+### Comparing Models
+
+Remember: you can compare most kinds of models in Rwith the `anova()` function. We can compare these models in terms of their deviance, the difference of which is $\chi^2$ distributed (for a significance test).
+
+```{r}
+anova(rcr_0, rcr_1)
+```
+
+>Q: What does this comparison tell us?    
+
+A:  The fixed effects are contributing to our model.
+
+Df is 5, not 3, b/c it's also incorporating the random effects terms. 5: slope for timeonmath, slope for school type, slope for interaction, then random effect for slope, covariance btwn random effect for intercept and random effect for slope.
+
+And you can compare models with and without random or fixed effects. For example, let's see how our full model compares to one without a random slope for time on math.
+
+```{r}
+rcr_2 <- lmer(mathscore ~ 1 + timeonmath*schooltype + (1| schoolid), # we have fixed slopes for schools within school type
+              data = nels_88)
+anova(rcr_1,
+      rcr_2)
+```
+
+>Q: What does this comparison tell us?    
+
+A:  Taking out a random effect (slope) is hurting the fit. Sometimes this can be useful for interpretability to "prune" random effects when model is getting complicated. But here it's saying don't take this out b/c it's sig. But if it was ns maybe you can take out to get something more parsimoneous.
+
+## Sample Write-up
+
+I ran a random coefficients regression in which students were nested in schools and both intercepts and slopes were allowed to vary randomly. I predicted students' math scores from the time they spent on their math homework, the type of school (public vs. private) that they attended, and the interaction between time spent on homework and type of school. On average, students at private schools obtained math scores of 59.21, whereas students at public schools scored 43.24, though this difference was not significant (t (7.09) = 2.04; p = .079). Time spent on math homework did not significantly predict math scores for private schools (t (7.40) = 0.21, p = .841), and this effect did not vary depending on school type (t (7.17) = -0.17, p = .869).
+
