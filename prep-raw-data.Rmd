@@ -50,12 +50,20 @@ write.csv(dfm_b_dup, "./prepped-data/sep-dfs/b-mturk-dup-data.csv")
 ```
 
 ## Qualtrics
+**Excluding**
+* Duplicates
+* Unapproved
 ```{r}
 dfq_b1 <- dfq_b %>% 
   filter(id %in% dfm_b_app$id & !id %in% dfm_b_dup$id) # filter out unapproved/
 # duplicate observations
 ```
 
+**Excluding**
+* Duplicates
+* Unapproved
+* Unfinished
+* Did not consent
 ```{r}
 dfq_b1 <- dfq_b1 %>% 
   filter(finished == 1 & consent == 1) # only finished and consenting obs
@@ -184,6 +192,14 @@ dfq1 <- dfq %>%
 # nEED TO CREATE A MISSINGNESS VARIABLE TO FILTER W -- MORE THAN 5%****
 ```
 
+**Excluding**
+* Duplicates
+* Unfinished
+* Reported cheating
+* Reported bad response
+* Unapproved
+* Did not consent
+
 ```{r}
 cols <- dfq1 %>% 
   colnames()
@@ -245,11 +261,20 @@ write.csv(dfq_b1, "./prepped-data/sep-dfs/b-qual-data.csv")
 
 # Join (df1)
 ```{r}
-df1 <- inner_join(dfq2, dfq_b1, by = "id", all = F) # join baseline and study 1 q data
+dfj <- inner_join(dfq2, dfq_b1, by = "id", all = F) # join baseline and study 1 q data
 ```
+
+**Excluding**
+* Duplicates
+* Unfinished
+* Reported cheating
+* Reported bad response
+* Unapproved
+* Did not consent
+* Was not in both dfs (b and s1)
 
 ## Save dfs
 ```{r}
-write.csv(df1, "./prepped-data/joined-data.csv")
+write.csv(dfj, "./prepped-data/joined-data.csv")
 ```
 
