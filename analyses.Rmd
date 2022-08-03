@@ -3,3 +3,29 @@ title: "analyses"
 output: html_document
 ---
 
+# IMRI Log Model
+## Coding for Above Average
+### w/o contol
+```{r}
+imriiz0_model1 = glm(data = df6, formula = as.factor(imri_iz0) ~ sc_scored, family = "binomial")
+summary(imriiz0_model1)
+```
+
+### w/ control
+```{r}
+imriiz0_model2 = glm(data = df6, formula = as.factor(imri_iz0) ~ sc_scored + conservatism_f, family = "binomial")
+summary(imriiz0_model2)
+```
+
+## Coding for Endpoint Bias
+### w/o control
+```{r}
+imriie_model1 = glm(data = df6, formula = as.factor(imri_ie) ~ sc_scored, family = "binomial")
+summary(imriie_model1)
+```
+
+### w/ control
+```{r}
+imriie_model2 = glm(data = df6, formula = as.factor(imri_ie) ~ sc_scored + conservatism_f, family = "binomial")
+summary(imriie_model2)
+```
