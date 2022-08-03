@@ -1,10 +1,16 @@
 ---
 title: "prep-raw-data"
-output: html_document
+output: 
+  html_document:
+    theme: cosmo
+    toc: true
+    toc_depth: 4
+    toc_float:
+      collapsed: false
 ---
 
 # Libraries
-```{r message=F, warning=F}
+```{r load-libs, message=F, warning=F}
 library(rio)
 library(here)
 library(tidyverse)
@@ -12,7 +18,7 @@ library(janitor)
 ```
 
 # Baseline Data
-```{r}
+```{r import-b-data}
 # mturk
 dfm_bp <- import(here("data", "baselinep-data.csv")) %>% 
   clean_names() %>% 
@@ -30,11 +36,11 @@ dfq_b <- import(here("data", "qual-baseline-data.csv")) %>%
 ```
 
 ## MTurk
-```{r}
+```{r bind-b}
 dfm_b <- rbind(dfm_bp, dfm_b1) # bind HIT dfs
 ```
 
-```{r}
+```{r id-dup/app-b}
 dfm_b_dup <- dfm_b %>% 
   group_by(id) %>% 
   filter(n() > 1) # identify duplicates
@@ -44,33 +50,38 @@ dfm_b_app <- dfm_b %>%
 ```
 
 ### Save dfs
-```{r}
+```{r save-dfs-bm}
 write.csv(dfm_b_app, "./prepped-data/sep-dfs/b-mturk-app-data.csv")
 write.csv(dfm_b_dup, "./prepped-data/sep-dfs/b-mturk-dup-data.csv")
 ```
 
 ## Qualtrics
-**Excluding**
+
+Excluding:
+
 * Duplicates
 * Unapproved
-```{r}
+
+```{r ex-dup/app-b}
 dfq_b1 <- dfq_b %>% 
   filter(id %in% dfm_b_app$id & !id %in% dfm_b_dup$id) # filter out unapproved/
 # duplicate observations
 ```
 
-**Excluding**
+Excluding:
+
 * Duplicates
 * Unapproved
-* Unfinished
-* Did not consent
-```{r}
+* **Unfinished**
+* **Did not consent**
+
+```{r ex-fin/con-b}
 dfq_b1 <- dfq_b1 %>% 
   filter(finished == 1 & consent == 1) # only finished and consenting obs
 ```
 
-```{r}
-bcols <- dfq_b1 %>% 
+```{r col-names-b}
+bcols <- dfq_b1 %>% # renaming items for clarity
   colnames()
 
 bcols1 <- rep(NA, length(bcols))
@@ -88,12 +99,12 @@ dfq_b1 <- dfq_b1 %>%
 ```
 
 ### Save dfs
-```{r}
+```{r save-df-bq}
 write.csv(dfq_b1, "./prepped-data/sep-dfs/b-qual-data.csv")
 ```
 
 # Sci Cur Data
-```{r}
+```{r import-data-sc}
 # mturk
 dfm_con1 <- import(here("data", "mturk-data-con1.csv")) %>% 
   clean_names() %>% 
@@ -121,11 +132,11 @@ dfq <- import(here("data", "qual-data.csv")) %>%
 ```
 
 ## MTurk
-```{r}
+```{r bind-scm}
 dfm <- rbind(dfm_con1, dfm_con2, dfm_lib1, dfm_lib2) # bind mturk data into 1 df
 ```
 
-```{r}
+```{r id-dup-scm}
 dfm_dup <- dfm %>% 
   group_by(id) %>% 
   filter(n() > 1) # identify duplicates
@@ -147,24 +158,24 @@ dfm_nodup <- dfm %>%
   filter(!id %in% dup_id)
 ```
 
-```{r}
+```{r id-app-scm}
 dfm_app <- dfm_nodup %>% 
   filter(approval_status == "Approved") # identify approved
 ```
 
-```{r}
+```{r batch-sc}
 dfm_batch <- dfm_app %>% 
   select(id, batch)
 ```
 
 ### Save dfs
-```{r}
+```{r save-dfs-scm}
 write.csv(dfm_app, "./prepped-data/sep-dfs/s1-mturk-app-data.csv")
 write.csv(dfm_batch, "./prepped-data/sep-dfs/s1-mturk-batch-data.csv")
 ```
 
 ## Qualtrics
-```{r echo=F, eval=F}
+```{r id-dup-scq, echo=F, eval=F}
 dfq_dup <- dfq %>% 
   filter(id %in% dup_id)
 
@@ -182,7 +193,16 @@ dfq_dup %>%
 #   filter(!id %in% dup_id & id %in% dfm_app$id)
 ```
 
-```{r}
+Excluding:
+
+* Duplicates
+* Unfinished
+* Reported cheating
+* Reported bad response
+* Unapproved
+* Did not consent
+
+```{r ex-dup/fin/cheat/bad/con/app-sc}
 dfq1 <- dfq %>% 
   filter(!id %in% dup_id & finished == 1 & cheat == 3 & bad_resp == 1 &
            consent1 == 1 & id %in% dfm_app$id) # exlude duplicates and 
@@ -192,15 +212,7 @@ dfq1 <- dfq %>%
 # nEED TO CREATE A MISSINGNESS VARIABLE TO FILTER W -- MORE THAN 5%****
 ```
 
-**Excluding**
-* Duplicates
-* Unfinished
-* Reported cheating
-* Reported bad response
-* Unapproved
-* Did not consent
-
-```{r}
+```{r col-names-sc}
 cols <- dfq1 %>% 
   colnames()
 
@@ -218,14 +230,14 @@ dfq1 <- dfq1 %>%
   rename(., id = id_sc)
 ```
 
-```{r}
+```{r join-batch-sc}
 dfq2 <- inner_join(dfq1, dfm_batch, by = "id", all = F)
 
 # dfq2 %>% 
 #   select(batch)
 ```
 
-```{r echo=F, eval=F}
+```{r batch/dup-sc, echo=F, eval=F}
 # dfq2 %>% 
 #   filter(id %in% dfq1$id)
 # 
@@ -254,27 +266,28 @@ dfq2 <- inner_join(dfq1, dfm_batch, by = "id", all = F)
 ```
 
 ### Save dfs
-```{r}
+```{r save-dfs-scq}
 write.csv(dfq2, "./prepped-data/sep-dfs/s1-qual-data.csv")
 write.csv(dfq_b1, "./prepped-data/sep-dfs/b-qual-data.csv")
 ```
 
 # Join (df1)
-```{r}
+```{r join-all}
 dfj <- inner_join(dfq2, dfq_b1, by = "id", all = F) # join baseline and study 1 q data
 ```
 
-**Excluding**
+Excluding:
+
 * Duplicates
 * Unfinished
 * Reported cheating
 * Reported bad response
 * Unapproved
 * Did not consent
-* Was not in both dfs (b and s1)
+* **Was not in both dfs (b and s1)**
 
 ## Save dfs
-```{r}
+```{r save-final-df}
 write.csv(dfj, "./prepped-data/joined-data.csv")
 ```
 

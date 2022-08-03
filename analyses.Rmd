@@ -1,31 +1,61 @@
 ---
 title: "analyses"
-output: html_document
+output: 
+  html_document:
+    theme: cosmo
+    toc: true
+    toc_depth: 4
+    toc_float:
+      collapsed: false
 ---
 
-# IMRI Log Model
-## Coding for Above Average
-### w/o contol
+# Descriptives
+
+# Inferential
+## IMRI Log Model
+### Coding for Above Average
+#### control only
 ```{r}
-imriiz0_model1 = glm(data = df6, formula = as.factor(imri_iz0) ~ sc_scored, family = "binomial")
+imriiz0_model1 = glm(data = df6, formula = as.factor(imri_iz0) ~ conservatism_f,
+                     family = "binomial")
+
 summary(imriiz0_model1)
 ```
 
-### w/ control
+#### w/ predictor
 ```{r}
-imriiz0_model2 = glm(data = df6, formula = as.factor(imri_iz0) ~ sc_scored + conservatism_f, family = "binomial")
+imriiz0_model2 = glm(data = df6, formula = as.factor(imri_iz0) ~ sc_scored + 
+                       conservatism_f, family = "binomial")
+
 summary(imriiz0_model2)
 ```
 
-## Coding for Endpoint Bias
-### w/o control
 ```{r}
-imriie_model1 = glm(data = df6, formula = as.factor(imri_ie) ~ sc_scored, family = "binomial")
+comp_iz0 <- anova(imriiz0_model1, imriiz0_model2)
+
+summary(comp_iz0)
+```
+
+### Coding for Endpoint Bias
+#### control only
+```{r}
+imriie_model1 = glm(data = df6, formula = as.factor(imri_ie) ~ conservatism_f, 
+                    family = "binomial")
+
 summary(imriie_model1)
 ```
 
-### w/ control
+#### w/ predictor
 ```{r}
-imriie_model2 = glm(data = df6, formula = as.factor(imri_ie) ~ sc_scored + conservatism_f, family = "binomial")
+imriie_model2 = glm(data = df6, formula = as.factor(imri_ie) ~ sc_scored + 
+                      conservatism_f, family = "binomial")
+
 summary(imriie_model2)
 ```
+
+```{r}
+comp_ie <- anova(imriie_model1, imriie_model2)
+
+summary(comp_ie)
+```
+
