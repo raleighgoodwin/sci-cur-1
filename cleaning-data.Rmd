@@ -36,6 +36,12 @@ It is already excluding:
 df1 <- import(here("prepped-data", "joined-data.csv"))
 ```
 
+## N (df1)
+```{r df1-N}
+df1 %>% 
+  nrow()
+```
+
 # Cleaning (df2)
 ```{r org-cols}
 df2 <- df1 %>%
@@ -54,7 +60,7 @@ df2[3:170] <- lapply(df2[3:170], as.numeric)
 df2[172:177] <- lapply(df2[172:177], as.numeric)
 ```
 
-## Duration
+## Duration (df3)
 ```{r id-dur-outlier}
 df2 <- df2 %>% 
   mutate(duration_z = scale(duration_in_seconds_sc),
@@ -65,14 +71,34 @@ df2 <- df2 %>%
          ))
 ```
 
+Now excluding:
+
+* Duplicates
+* Unfinished
+* Reported cheating
+* Reported bad response
+* Unapproved
+* Did not consent
+* Was not in both dfs (b and s1)
+* **Outlier duration**
+
 ```{r ex-dur}
-df2 <- df2 %>% 
+df2 %>% 
+  filter(duration_ex == 1) %>% 
+  nrow()
+
+df3 <- df2 %>% 
   filter(duration_ex != 1)
 ```
+### N (df3)
+```{r df3-N}
+df3 %>% 
+  nrow()
+```
 
-## Political Ideology
+## Political Ideology (df3)
 ```{r score-ideology}
-df2 <- df2 %>% 
+df3 <- df3 %>% 
   mutate(conservatism = dem_annes_id_b, # 1 (ext L), 7 (ext C), 4 = mod
          ideology_lean = dem_annes_id2_b, # 1 = R lean, 2 = neither, 4 = D lean
          ideology_lean2 = case_when(
@@ -96,13 +122,13 @@ df2 <- df2 %>%
 ```
 
 ```{r check-scoring, eval=F, echo=F}
-df2 %>%
+df3 %>%
   filter(conservatism != 4 & is.na(ideology_lean2) == F) # this works
 ```
 
 ```{r check-id-batch-match}
 # checking if batch and ideology match -- it doesn't for all??
-df2 <- df2 %>% 
+df3 <- df3 %>% 
   mutate(batchcon = case_when(
     batch == "con1" ~ 1,
     batch == "con2" ~ 1,
@@ -113,23 +139,31 @@ df2 <- df2 %>%
     batchcon = ifelse(batchcon == 999, NA, batchcon)
   )
 
-df2_picheck <- df2 %>% 
+df3_picheck <- df3 %>% 
   select(id, con, batchcon) %>% 
   mutate(batchmatch = ifelse(con == batchcon, 1, 0))
 
-df2_picheck %>% 
+df3_picheck %>% 
   filter(batchmatch == 0) %>% 
   nrow() # all of these ppl got sorted into the wrong HIT, not too much of an issue though
 
-df2_picheck %>% 
+df3_picheck %>% 
   filter(batchmatch == 0) %>% 
   head(10) 
 ```
 
-### Updated N
+
+```{r check-ideology-na, echo=F, eval=F}
+df3 %>%
+  select(contains("annes")) %>%
+  filter(is.na(dem_annes_id_b) == T) %>%
+  nrow() # ok everyone is partisan labeled
+```
+
+### N (df3)
 Ncon = 227, Nmod = 52, Nlib = 266. Ntot = 545
-```{r updated-N}
-df2 %>% 
+```{r df3-N-con}
+df3 %>% 
   group_by(con) %>% 
   summarise(n = n())
 ```
@@ -153,10 +187,10 @@ Haven't touched these yet.
 # _12 = 150-200k, _13 = 200-250k, _14 > 250k)
 ```
 
-# Science Curiosity Scale (df3)
+# Science Curiosity Scale (df4)
 ## Recode
 ```{r recode-scicur}
-df3 <- df2 %>%
+df4 <- df3 %>%
   mutate(sc_likert = news1_2_sc + news1_6_sc + convo_2_sc + convo_10_sc +
            topic_interest_3_sc + topic_interest_5_sc + topic_interest_8_sc,
          sc_books = as.numeric(case_when(
@@ -195,14 +229,14 @@ df3 <- df2 %>%
 ```
 
 ```{r check-scicur-recode}
-df3 %>% 
+df4 %>% 
   select(contains("sc_")) %>% 
   head(10)
 ```
 
 ## Score
 ```{r score-scicur}
-df3 <- df3 %>% # score sci cur
+df4 <- df4 %>% # score sci cur
   mutate(sc_score1 = sc_likert + sc_books + sc_lecture + sc_scimu + 
            sc_scimu_c19 + sc_read,
          sc_score2a = sc_share_tech + sc_share_sci,
@@ -212,329 +246,340 @@ df3 <- df3 %>% # score sci cur
 
 ```
 
+## No Outliers
+```{r id-scicur-outlier}
+df4 %>% 
+  filter(sc_scoredz <= -3) %>% 
+  nrow()
+```
+
 ## Descriptives
 ```{r scicur-desc}
-df3$sc_scored %>% 
+df4$sc_scored %>% 
   psych::describe()
 
-df3 %>% 
+df4 %>% 
   ggplot(aes(x = sc_score1)) +
   geom_histogram()
 ```
 
-# RPM (df4)
+# RPM (df5)
 ## Score
 ```{r score-rpm}
-df4 <- df3 %>% 
-  mutate(rav_scored = ravens1_b + ravens2_b + ravens3_b + ravens4_b + ravens5_b +
-           ravens6_b + ravens7_b + ravens8_b + ravens9_b + ravens10_b,
+df5 <- df4 %>% 
+  mutate(rav1_0 = ifelse(is.na(ravens1_b) == T, 0, ravens1_b),
+         rav2_0 = ifelse(is.na(ravens2_b) == T, 0, ravens2_b),
+         rav3_0 = ifelse(is.na(ravens3_b) == T, 0, ravens3_b),
+         rav4_0 = ifelse(is.na(ravens4_b) == T, 0, ravens4_b),
+         rav5_0 = ifelse(is.na(ravens5_b) == T, 0, ravens5_b),
+         rav6_0 = ifelse(is.na(ravens6_b) == T, 0, ravens6_b),
+         rav7_0 = ifelse(is.na(ravens7_b) == T, 0, ravens7_b),
+         rav8_0 = ifelse(is.na(ravens8_b) == T, 0, ravens8_b),
+         rav9_0 = ifelse(is.na(ravens9_b) == T, 0, ravens9_b),
+         rav10_0 = ifelse(is.na(ravens10_b) == T, 0, ravens10_b),
+         rav_scored = rav1_0 + rav2_0 + rav3_0 + rav4_0 + rav5_0 +
+           rav6_0 + rav7_0 + rav8_0 + rav9_0 + rav10_0,
          rav_scoredz = scale(rav_scored))
-
-# df4 %>% 
-#   select(contains("rav"), -contains("click"), -contains("submit"))
-
-df4 %>% 
-  filter(is.na(rav_scored) == T) %>% 
-  nrow() # gotta check this out
 ```
 
-```{r rpm-cols, echo=F, eval=F}
-rav_cols <- df4 %>% 
-  select(contains("ravens"), -contains("click"), -contains("submit")) %>% 
-  colnames()
+## Exclude Outliers (df6)
+```{r id-rpm-outlier}
+df5 %>% 
+  filter(rav_scoredz <= -3) %>% 
+  nrow()
+```
 
-rav_cols1 <- rep(NA, length(rav_cols))
+```{r ex-rpm}
+df6 <- df5 %>% 
+  filter(rav_scoredz > -3)
+```
 
-for (i in 1:length(rav_cols)) {
-  
-  rav_cols1[i] = paste(cols[i], "sc", sep = "_")
-
-} # change name of raven cols (not done!)
-
-# colnames(dfq1) <- cols1
-# 
-# dfq1 <- dfq1 %>% 
-#   rename(., id = id_sc)
+## N (df6)
+```{r df6-N}
+df6 %>% 
+  group_by(con) %>% 
+  summarise(n = n())
 ```
 
 ## Descriptives
 ```{r rpm-desc}
-df4$rav_scored %>% 
+df6$rav_scored %>% 
   psych::describe()
 
-df4 %>%
+df6 %>%
   ggplot(aes(x = rav_scored)) +
+  geom_histogram(binwidth = .5)
+
+df6 %>%
+  ggplot(aes(x = rav_scoredz)) +
   geom_histogram(binwidth = .5)
 ```
 
-# MR Task (df5)
-## Recode
-```{r recode-mr}
-df5 <- df4 %>% 
-  mutate(arctic20e = dplyr::recode(arctic2_1_sc, `1` = 3,
-                           `2` = 2,
-                           `3` = 1,
-                           `4` = 0,
-                           `5` = -1,
-                           `6` = -2,
-                           `7` = -3),
-         arctic20z = scale(arctic20e),
-         temp20e = dplyr::recode(temp2_1_sc,`1` = -3,
+Now excluding:
+
+* Duplicates
+* Unfinished
+* Reported cheating
+* Reported bad response
+* Unapproved
+* Did not consent
+* Was not in both dfs (b and s1)
+* **Outliers:**
+  + Duration (1)
+  + Science Curiosity (0)
+  + Raven's Progressive Matrices (2)
+
+# MR Task (df7)
+## Recode (-3 to 3)
+```{r recode-mr-x}
+df7 <- df6 %>% 
+  mutate(arctic20 = dplyr::recode(arctic2_1_sc, `1` = -3,
                            `2` = -2,
                            `3` = -1,
                            `4` = 0,
                            `5` = 1,
                            `6` = 2,
                            `7` = 3),
-         temp20z = scale(temp20e),
-         ozone20e = dplyr::recode(ozone2_1_sc, `1` = 3,
+         arctic20_z = scale(arctic20),
+         temp20 = dplyr::recode(temp2_1_sc,`1` = 3,
                            `2` = 2,
                            `3` = 1,
+                           `4` = 0,
+                           `5` = -1,
+                           `6` = -2,
+                           `7` = -3),
+         temp20_z = scale(temp20),
+         ozone20 = dplyr::recode(ozone2_1_sc, `1` = -3,
+                           `2` = -2,
+                           `3` = -1,
                            `4` = 0,   
-                           `5` = -1,
-                           `6` = -2,
-                           `7` = -3),
-         ozone20z = scale(ozone20e),
-         airqual20e = dplyr::recode(air_qual2_1_sc, `1` = 3,
-                           `2` = 2,
-                           `3` = 1,
-                           `4` = 0,
-                           `5` = -1,
-                           `6` = -2,
-                           `7` = -3),
-         airqual20z = scale(airqual20e),
-         diatho20e = dplyr::recode(dia_tho2_1_sc, `1` = 3,
-                           `2` = 2,
-                           `3` = 1,
-                           `4` = 0,
-                           `5` = -1,
-                           `6` = -2,
-                           `7` = -3),
-         diatho20z = scale(diatho20e),
-         co220e = dplyr::recode(co22_1_sc, `1` = -3,
+                           `5` = 1,
+                           `6` = 2,
+                           `7` = 3),
+         ozone20_z = scale(ozone20),
+         airqual20 = dplyr::recode(air_qual2_1_sc, `1` = -3,
                            `2` = -2,
                            `3` = -1,
                            `4` = 0,
                            `5` = 1,
                            `6` = 2,
                            `7` = 3),
-         co220z = scale(co220e),
-         icesheets20e = dplyr::recode(ice_sheets2_1_sc, `1` = 3,
+         airqual20_z = scale(airqual20),
+         diatho20 = dplyr::recode(dia_tho2_1_sc, `1` = -3,
+                           `2` = -2,
+                           `3` = -1,
+                           `4` = 0,
+                           `5` = 1,
+                           `6` = 2,
+                           `7` = 3),
+         diatho20_z = scale(diatho20),
+         co220 = dplyr::recode(co22_1_sc, `1` = 3,
                            `2` = 2,
                            `3` = 1,
                            `4` = 0,
                            `5` = -1,
                            `6` = -2,
                            `7` = -3),
-         icesheets20z = scale(icesheets20e),
-         quake20e = if_else(quake2_1_sc == 0, 0, 1)
+         co220_z = scale(co220),
+         icesheets20 = dplyr::recode(ice_sheets2_1_sc, `1` = -3,
+                           `2` = -2,
+                           `3` = -1,
+                           `4` = 0,
+                           `5` = 1,
+                           `6` = 2,
+                           `7` = 3),
+         icesheets20_z = scale(icesheets20),
+         quake20 = if_else(quake2_1_sc == 4, 0, 1)
          )
 ```
 
-### Descriptives
-```{r check-mr-recode}
-df5 %>% 
-  select(contains("20e")) %>% 
-  psych::describe()
+## Recode (eb: 0 to 3)
+```{r recode-mr-eb}
+df7 <- df7 %>% 
+  mutate(arctic20_eb = dplyr::recode(arctic2_1_sc, `1` = 0,
+                           `2` = 0,
+                           `3` = 0,
+                           `4` = 0,
+                           `5` = 1,
+                           `6` = 2,
+                           `7` = 3),
+         arctic20_eb_z = scale(arctic20_eb),
+         temp20_eb = dplyr::recode(temp2_1_sc,`1` = 3,
+                           `2` = 2,
+                           `3` = 1,
+                           `4` = 0,
+                           `5` = 0,
+                           `6` = 0,
+                           `7` = 0),
+         temp20_eb_z = scale(temp20_eb),
+         ozone20_eb = dplyr::recode(ozone2_1_sc, `1` = 0,
+                           `2` = 0,
+                           `3` = 0,
+                           `4` = 0,   
+                           `5` = 1,
+                           `6` = 2,
+                           `7` = 3),
+         ozone20_eb_z = scale(ozone20_eb),
+         airqual20_eb = dplyr::recode(air_qual2_1_sc, `1` = 0,
+                           `2` = 0,
+                           `3` = 0,
+                           `4` = 0,
+                           `5` = 1,
+                           `6` = 2,
+                           `7` = 3),
+         airqual20_eb_z = scale(airqual20_eb),
+         diatho20_eb = dplyr::recode(dia_tho2_1_sc, `1` = 0,
+                           `2` = 0,
+                           `3` = 0,
+                           `4` = 0,
+                           `5` = 1,
+                           `6` = 2,
+                           `7` = 3),
+         diatho20_eb_z = scale(diatho20_eb),
+         co220_eb = dplyr::recode(co22_1_sc, `1` = 3,
+                           `2` = 2,
+                           `3` = 1,
+                           `4` = 0,
+                           `5` = 0,
+                           `6` = 0,
+                           `7` = 0),
+         co220_eb_z = scale(co220_eb),
+         icesheets20_eb = dplyr::recode(ice_sheets2_1_sc, `1` = 0,
+                           `2` = 0,
+                           `3` = 0,
+                           `4` = 0,
+                           `5` = 1,
+                           `6` = 2,
+                           `7` = 3),
+         icesheets20_eb_z = scale(icesheets20_eb),
+         quake20_eb = if_else(quake2_1_sc == 4, 0, 1)
+         )
 ```
 
-```{r plot-mr-z}
-df5 %>%
-  ggplot(aes(x = arctic20z)) +
-  geom_histogram(binwidth = 1)
-
-df5 %>%
-  ggplot(aes(x = temp20z)) +
-  geom_histogram(binwidth = 1)
-
-df5 %>%
-  ggplot(aes(x = ozone20z)) +
-  geom_histogram(binwidth = 1)
-
-df5 %>%
-  ggplot(aes(x = airqual20z)) +
-  geom_histogram(binwidth = 1)
+## Recode (yn: 0 or 1)
+```{r recode-mr-yn}
+df7 <- df7 %>% 
+  mutate(arctic20_yn = dplyr::recode(arctic2_1_sc, `1` = 0,
+                           `2` = 0,
+                           `3` = 0,
+                           `4` = 1,
+                           `5` = 1,
+                           `6` = 1,
+                           `7` = 1),
+         temp20_yn = dplyr::recode(temp2_1_sc,`1` = 1,
+                           `2` = 1,
+                           `3` = 1,
+                           `4` = 1,
+                           `5` = 0,
+                           `6` = 0,
+                           `7` = 0),
+         ozone20_yn = dplyr::recode(ozone2_1_sc, `1` = 0,
+                           `2` = 0,
+                           `3` = 0,
+                           `4` = 1,   
+                           `5` = 1,
+                           `6` = 1,
+                           `7` = 1),
+         airqual20_yn = dplyr::recode(air_qual2_1_sc, `1` = 0,
+                           `2` = 0,
+                           `3` = 0,
+                           `4` = 1,
+                           `5` = 1,
+                           `6` = 1,
+                           `7` = 1),
+         diatho20_yn = dplyr::recode(dia_tho2_1_sc, `1` = 0,
+                           `2` = 0,
+                           `3` = 0,
+                           `4` = 1,
+                           `5` = 1,
+                           `6` = 1,
+                           `7` = 1),
+         co220_yn = dplyr::recode(co22_1_sc, `1` = 1,
+                           `2` = 1,
+                           `3` = 1,
+                           `4` = 1,
+                           `5` = 0,
+                           `6` = 0,
+                           `7` = 0),
+         icesheets20_yn = dplyr::recode(ice_sheets2_1_sc, `1` = 0,
+                           `2` = 0,
+                           `3` = 0,
+                           `4` = 1,
+                           `5` = 1,
+                           `6` = 1,
+                           `7` = 1),
+         quake20_yn = if_else(quake2_1_sc == 4, 0, 1)
+         )
 ```
 
-```{r plot-mr-e}
-df5 %>%
-  ggplot(aes(x = arctic20e)) +
-  geom_histogram(binwidth = 1)
-
-df5 %>%
-  ggplot(aes(x = temp20e)) +
-  geom_histogram(binwidth = 1)
-
-df5 %>%
-  ggplot(aes(x = ozone20e)) +
-  geom_histogram(binwidth = 1)
-
-df5 %>%
-  ggplot(aes(x = airqual20e)) +
-  geom_histogram(binwidth = 1)
-```
-
-All of the MR items are very negatively skewed; most people exhibited endpoint 
-bias. We preregistered coding the IMRI so that it was based on z > 1.5, but
-that isn't helpful here with this distribution. 
-
-## Score
-```{r score-mr}
-df5 <- df5 %>% 
-  mutate(n_plot_score = diatho20e + co220e + icesheets20e,
+## Score (eb)
+```{r score-mr-eb}
+df7 <- df7 %>% 
+  mutate(n_plot_score = diatho20_eb + co220_eb + icesheets20_eb,
          n_plot_score_z = scale(n_plot_score),
-         nq_plot_score = n_plot_score + quake20e, 
-         nq_plot_score_z = scale(nq_plot_score),
-         con_plot = arctic20e + temp20e,
-         con_plot_z = scale(con_plot),
-         lib_plot = ozone20e + airqual20e,
-         lib_plot_z = scale(lib_plot))
+         nq_plot_score = n_plot_score + quake20_eb, 
+         nq_plot_score_z = scale(nq_plot_score))
 
-df5 <- df5 %>% 
+df7 <- df7 %>% 
   mutate(bad_plot_score = ifelse(n_plot_score_z <= -3, 1, 0),
          bad_plot_score_q = ifelse(nq_plot_score_z <= -3, 1, 0)
          ) # turns out no diff btwn no q and _q so can just use no q
 ```
 
-```{r check-ideology-na, echo=F, eval=F}
-df5 %>%
-  select(contains("annes")) %>%
-  filter(is.na(dem_annes_id_b) == T) %>%
-  nrow() # ok everyone is partisan labeled
-```
-
-## Poor Plot Performance
-Only 6 people (~1%) performed exceptionally poorly on the filler plot items.
-```{r poor-perf-desc, eval=F, echo=F}
-df5 %>% 
+## No Outliers
+```{r id-mr-outliers}
+df7 %>% 
   select(contains("bad_plot_score")) %>% 
   psych::describe()
 
-df5 %>% 
+df7 %>% 
   filter(bad_plot_score == 1) %>% 
   nrow()
 ```
 
-## Attention Check (Practice Item)
+Now excluding:
+
+* Duplicates
+* Unfinished
+* Reported cheating
+* Reported bad response
+* Unapproved
+* Did not consent
+* Was not in both dfs (b and s1)
+* Outliers:
+  + Duration (1)
+  + Science Curiosity (0)
+  + Raven's Progressive Matrices (2)
+  + **Poor Performance on Filler Items (0)**
+
+# Attention Check (Practice Item)
 A ton of people failed the attention check, which leads me to believe it was
 probably not the best attention check. I'll see if this correlates with
 anything else important.
-```{r attn-check-score-and-desc}
-df5 <- df5 %>% 
+```{r id-attn-fail}
+df7 <- df7 %>% 
   mutate(attn_check = if_else(prac2_1_sc == 6, 1, 0),
          attn_check_12 = if_else(prac1_1_sc == prac2_1_sc, 1, 0))
 
-df5 %>% 
+df7 %>% 
   select(contains("attn_check")) %>% 
   psych::describe()
 ```
 
-# IMRI
-So this gets tricky because of the negative skew of the responses for these items.
-No one actually has z > 1.5 on any of them, so that scoring method isn't helpful.
-
-```{r prereg-eb-score-desc}
-df5 <- df5 %>%
-  mutate(ebiasiz15_arctic = ifelse(arctic20z >= 1.5, 1, 0),
-         ebiasiz15_temp = ifelse(temp20z >= 1.5, 1, 0),
-         ebiasiz15_ozone = ifelse(ozone20z >= 1.5, 1, 0),
-         ebiasiz15_airqual = ifelse(airqual20z >= 1.5, 1, 0))
-
-df5 %>% 
-  select(contains("ebiasiz15")) %>% 
-  psych::describe()
+## Exclude Failed Attention Checks (df7attn)
+```{r ex-attn-fail}
+df7attn <- df7 %>% 
+  filter(attn_check == 1)
 ```
 
-## Coding for Above-Average
-Here's what happens if we code it based on whether or not they exhibit
-above-average endpoint bias (e.g., z > 0).
-```{r eb-z-score-desc}
-df5 <- df5 %>% 
-  mutate(ebiasiz0_arctic = ifelse(arctic20z >= 0, 1, 0),
-         ebiasiz0_temp = ifelse(temp20z >= 0, 1, 0),
-         ebiasiz0_ozone = ifelse(ozone20z >= 0, 1, 0),
-         ebiasiz0_airqual = ifelse(airqual20z >= 0, 1, 0))
-
-df5 %>% 
-  select(contains("ebiasiz0")) %>% 
-  psych::describe()
-```
-
-```{r eb-score-desc}
-df5 <- df5 %>% 
-  mutate(
-    ebiasiz0_con = ebiasiz0_arctic + ebiasiz0_temp,
-    ebiasiz0_lib = ebiasiz0_ozone + ebiasiz0_airqual,
-    ebiasiz0_con_yn = ifelse(ebiasiz0_con == 2, 1, 0),
-    ebiasiz0_lib_yn = ifelse(ebiasiz0_lib == 2, 1, 0),
-  )
-
-df5 %>% 
-  select(ebiasiz0_con, ebiasiz0_lib, ebiasiz0_con_yn, ebiasiz0_lib_yn) %>% 
-  psych::describe()
-```
-
-## Coding for Endpoint Bias
-Here's what happens if we code it solely based on whether or not they exhibit
-endpoint bias at all (e.g., score > 0; the higher the number, the more extreme
-their bias)
-
-```{r imri-code}
-df5 <- df5 %>% 
-  mutate(imri_iz0 = case_when(
-    con == 1 ~ ifelse(ebiasiz0_con_yn == 1 & ebiasiz0_lib_yn == 0, 1, 0),
-    con == 0 ~ ifelse(ebiasiz0_con_yn == 0 & ebiasiz0_lib_yn == 1, 1, 0),
-    TRUE ~ 0
-  ))
-
-df5 %>% 
-  filter(imri_iz0 == 1) %>% 
+## N (df7attn)
+```{r df7attn-N}
+df7 %>% 
+  filter(attn_check == 0) %>% 
   nrow()
 ```
 
-```{r}
-df5 <- df5 %>% 
-  mutate(ebiasie_arctic = ifelse(arctic20e > 0, 1, 0),
-         ebiasie_temp = ifelse(temp20e > 0, 1, 0),
-         ebiasie_ozone = ifelse(ozone20e > 0, 1, 0),
-         ebiasie_airqual = ifelse(airqual20e > 0, 1, 0)
-  )
-
-df5 %>% 
-  select(contains("ebiasie")) %>% 
-  psych::describe()
-```
-
-```{r}
-df5 <- df5 %>% 
-  mutate(
-    ebiasie_con = ebiasie_arctic + ebiasie_temp,
-    ebiasie_lib = ebiasie_ozone + ebiasie_airqual,
-    ebiasie_con_yn = ifelse(ebiasie_con == 2, 1, 0),
-    ebiasie_lib_yn = ifelse(ebiasie_lib == 2, 1, 0),
-  )
-
-df5 %>% 
-  select(ebiasie_con, ebiasie_lib, ebiasie_con_yn, ebiasie_lib_yn) %>% 
-  psych::describe()
-```
-
-```{r}
-df5 <- df5 %>% 
-  mutate(imri_ie = case_when(
-    con == 1 ~ ifelse(ebiasie_con_yn == 1 & ebiasie_lib_yn == 0, 1, 0),
-    con == 0 ~ ifelse(ebiasie_con_yn == 0 & ebiasie_lib_yn == 1, 1, 0),
-    TRUE ~ 0
-  ))
-
-df5 %>% 
-  filter(imri_ie == 1) %>% 
-  nrow()
-```
-
-# Exclude (df6)
-
-Now excluding:
+Now excluding (df7attn):
 
 * Duplicates
 * Unfinished
@@ -543,22 +588,21 @@ Now excluding:
 * Unapproved
 * Did not consent
 * Was not in both dfs (b and s1)
-* **Outlier duration**
-* **Poor performance on plots**
+* Outliers:
+  + Duration (1)
+  + Science Curiosity (0)
+  + Raven's Progressive Matrices (2)
+  + Poor Performance on Filler Items (0)
+* **Attention check failure (381)**
 
-```{r}
-df5 <- df5 %>% 
-  filter(bad_plot_score != 1)
-
-df5 %>% 
+# Save (df7)
+## N (df7)
+```{r final-N}
+df7 %>% 
   nrow()
-
-df5 %>% 
-  group_by(con) %>% 
-  summarise(n = n())
 ```
 
-Now excluding:
+Final df (df7) is excluding:
 
 * Duplicates
 * Unfinished
@@ -567,37 +611,13 @@ Now excluding:
 * Unapproved
 * Did not consent
 * Was not in both dfs (b and s1)
-* **Outlier duration**
-* **Poor performance on plots**
-* **Failed attention check**
+* Outliers:
+  + Duration (1)
+  + Science Curiosity (0)
+  + Raven's Progressive Matrices (2)
+  + Poor Performance on Filler Items (0)
 
-```{r}
-df6attn <- df5 %>% 
-  filter(attn_check != 1) # basically not feasible bc it's so many ppl
-
-df6attn %>% 
-  nrow()
-
-df6attn %>% 
-  group_by(con) %>% 
-  summarise(n = n())
-```
-
-# Save
-Final df excluding:
-
-* Duplicates
-* Unfinished
-* Reported cheating
-* Reported bad response
-* Unapproved
-* Did not consent
-* Was not in both dfs (b and s1)
-* Outlier duration
-* Performed poorly on filler plot items
-
-```{r eval=F}
-# Save df (df6)
-write.csv(df6, "./analysis-data/cleaned-data.csv")
+```{r save}
+write.csv(df7, "./analysis-data/cleaned-data.csv")
 ```
 

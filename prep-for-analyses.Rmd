@@ -1,0 +1,287 @@
+---
+title: "prep-for-analyses"
+output:
+  html_document:
+    theme: cosmo
+    toc: true
+    toc_depth: 4
+    toc_float:
+      collapsed: false
+---
+
+# Libraries
+```{r load-libs, message=F, warning=F}
+library(rio)
+library(here)
+library(tidyverse)
+library(janitor)
+library(ggplot2)
+```
+
+# Import Cleaned Data (df7 -> dfc1)
+
+It is already excluding:
+
+* Duplicates
+* Unfinished
+* Reported cheating
+* Reported bad response
+* Unapproved
+* Did not consent
+* Was not in both dfs (b and s1)
+* Outliers:
+  + Duration (1)
+  + Science Curiosity (0)
+  + Raven's Progressive Matrices (2)
+  + Poor Performance on Filler Items (0)
+
+```{r import-data}
+dfc1 <- import(here("analysis-data", "cleaned-data.csv"))
+```
+
+# MR Task (dfc2)
+
+### Descriptives
+```{r}
+dfc2 %>%
+  select(contains("20"), -contains("_z"), -contains("eb"), -contains("yn")) %>%
+  psych::describe()
+
+dfc2 %>%
+  filter(con == 1) %>% 
+  select(contains("20"), -contains("_z"), -contains("eb"), -contains("yn")) %>%
+  psych::describe()
+
+dfc2 %>%
+  filter(con == 0) %>% 
+  select(contains("20"), -contains("_z"), -contains("eb"), -contains("yn")) %>%
+  psych::describe()
+
+dfc2 %>%
+  filter(con == -1) %>% 
+  select(contains("20"), -contains("_z"), -contains("eb"), -contains("yn")) %>%
+  psych::describe()
+```
+
+```{r plot-x}
+dfc2 %>%
+  ggplot(aes(x = arctic20)) +
+  geom_histogram(binwidth = 1)
+
+dfc2 %>%
+  ggplot(aes(x = temp20)) +
+  geom_histogram(binwidth = 1)
+
+dfc2 %>%
+  ggplot(aes(x = ozone20)) +
+  geom_histogram(binwidth = 1)
+
+dfc2 %>%
+  ggplot(aes(x = airqual20)) +
+  geom_histogram(binwidth = 1)
+```
+
+```{r}
+amodel1 <- lm(data = dfc3, formula = arctic20 ~ con + rav_scored)
+summary(amodel1)
+
+amodel2 <- lm(data = dfc3, formula = arctic20 ~ sc_scored + con + rav_scored)
+summary(amodel2)
+
+tmodel1 <- lm(data = dfc3, formula = temp20 ~ con + rav_scored)
+summary(tmodel1)
+
+tmodel2 <- lm(data = dfc3, formula = temp20 ~ sc_scored + con + rav_scored)
+summary(tmodel2)
+
+omodel1 <- lm(data = dfc3, formula = ozone20 ~ con + rav_scored)
+summary(omodel1)
+
+omodel2 <- lm(data = dfc3, formula = ozone20 ~ sc_scored + con + rav_scored)
+summary(omodel2)
+
+aqmodel1 <- lm(data = dfc3, formula = airqual20 ~ con + rav_scored)
+summary(aqmodel1)
+
+aqmodel2 <- lm(data = dfc3, formula = airqual20 ~ sc_scored + con + rav_scored)
+summary(aqmodel2)
+```
+
+### Descriptives
+```{r desc-eb}
+dfc2 %>%
+  select(contains("20_eb"), -contains("z")) %>%
+  psych::describe()
+```
+
+```{r plot-mr-eb}
+dfc2 %>%
+  ggplot(aes(x = arctic20_eb)) +
+  geom_histogram(binwidth = 1)
+
+dfc2 %>%
+  ggplot(aes(x = temp20_eb)) +
+  geom_histogram(binwidth = 1)
+
+dfc2 %>%
+  ggplot(aes(x = ozone20_eb)) +
+  geom_histogram(binwidth = 1)
+
+dfc2 %>%
+  ggplot(aes(x = airqual20_eb)) +
+  geom_histogram(binwidth = 1)
+```
+
+### Descriptives
+```{r}
+dfc2 %>%
+  select(contains("20_yn")) %>%
+  psych::describe()
+```
+
+```{r score-mr-eb}
+dfc2 <- dfc2 %>% 
+  mutate(con_plot = arctic20_eb + temp20_eb,
+         con_plot_z = scale(con_plot),
+         lib_plot = ozone20_eb + airqual20_eb,
+         lib_plot_z = scale(lib_plot))
+
+```
+
+## Score (eb)
+
+## Score (yn)
+
+# IMRI
+## z >= 1.5
+```{r prereg-eb-score-desc}
+dfc3 <- dfc2 %>%
+  mutate(ebiasiz15_arctic = ifelse(arctic20_z >= 1.5, 1, 0),
+         ebiasiz15_temp = ifelse(temp20_z >= 1.5, 1, 0),
+         ebiasiz15_ozone = ifelse(ozone20_z >= 1.5, 1, 0),
+         ebiasiz15_airqual = ifelse(airqual20_z >= 1.5, 1, 0))
+
+dfc3 %>% 
+  select(contains("ebiasiz15")) %>% 
+  psych::describe()
+```
+
+```{r}
+arcticmodel1 <- glm(data = dfc3, formula = ebiasiz15_arctic ~ con + rav_scored, family = "binomial")
+summary(arcticmodel1)
+
+arcticmodel2 <- glm(data = dfc3, formula = ebiasiz15_arctic ~ sc_scored + con + rav_scored, family = "binomial")
+summary(arcticmodel2)
+```
+
+```{r}
+tempmodel1 <- glm(data = dfc3, formula = ebiasiz15_temp ~ con + rav_scored, family = "binomial")
+summary(tempmodel1)
+
+tempmodel2 <- glm(data = dfc3, formula = ebiasiz15_temp ~ sc_scored + con + rav_scored, family = "binomial")
+summary(tempmodel2)
+```
+
+```{r}
+ozonemodel1 <- glm(data = dfc3, formula = ebiasiz15_ozone ~ con + rav_scored, family = "binomial")
+summary(ozonemodel1)
+
+ozonemodel2 <- glm(data = dfc3, formula = ebiasiz15_ozone ~ sc_scored + con + rav_scored, family = "binomial")
+summary(ozonemodel2)
+```
+
+```{r}
+airqualmodel1 <- glm(data = dfc3, formula = ebiasiz15_airqual ~ con + rav_scored, family = "binomial")
+summary(airqualmodel1)
+
+airqualmodel2 <- glm(data = dfc3, formula = ebiasiz15_airqual ~ sc_scored + con + rav_scored, family = "binomial")
+summary(airqualmodel2)
+```
+
+## z > 0
+Here's what happens if we code it based on whether or not they exhibit
+above-average endpoint bias (e.g., z > 0).
+```{r eb-z-score-desc}
+dfc3 <- dfc3 %>% 
+  mutate(ebiasiz0_arctic = ifelse(arctic20_z >= 0, 1, 0),
+         ebiasiz0_temp = ifelse(temp20_z >= 0, 1, 0),
+         ebiasiz0_ozone = ifelse(ozone20_z >= 0, 1, 0),
+         ebiasiz0_airqual = ifelse(airqual20_z >= 0, 1, 0))
+
+dfc3 %>% 
+  select(contains("ebiasiz0")) %>% 
+  psych::describe()
+```
+
+```{r eb-score-desc}
+dfc3 <- dfc3 %>% 
+  mutate(
+    ebiasiz0_con = ebiasiz0_arctic + ebiasiz0_temp,
+    ebiasiz0_lib = ebiasiz0_ozone + ebiasiz0_airqual,
+    ebiasiz0_con_yn = ifelse(ebiasiz0_con == 2, 1, 0),
+    ebiasiz0_lib_yn = ifelse(ebiasiz0_lib == 2, 1, 0),
+  )
+
+dfc3 %>% 
+  select(ebiasiz0_con, ebiasiz0_lib, ebiasiz0_con_yn, ebiasiz0_lib_yn) %>% 
+  psych::describe()
+```
+
+## y/n
+Here's what happens if we code it solely based on whether or not they exhibit
+endpoint bias at all (e.g., score > 0; the higher the number, the more extreme
+their bias)
+
+```{r imri-code}
+dfc3 <- dfc3 %>% 
+  mutate(imri_iz0 = case_when(
+    con == 1 ~ ifelse(ebiasiz0_con_yn == 1 & ebiasiz0_lib_yn == 0, 1, 0),
+    con == 0 ~ ifelse(ebiasiz0_con_yn == 0 & ebiasiz0_lib_yn == 1, 1, 0),
+    TRUE ~ 0
+  ))
+
+dfc3 %>% 
+  filter(imri_iz0 == 1) %>% 
+  nrow()
+```
+
+```{r}
+dfc3 <- dfc3 %>% 
+  mutate(ebiasie_arctic_eb = ifelse(arctic20_eb > 0, 1, 0),
+         ebiasie_temp_eb = ifelse(temp20_eb > 0, 1, 0),
+         ebiasie_ozone_eb = ifelse(ozone20_eb > 0, 1, 0),
+         ebiasie_airqual_eb = ifelse(airqual20_eb > 0, 1, 0)
+  )
+
+dfc3 %>% 
+  select(contains("ebiasie")) %>% 
+  psych::describe()
+```
+
+```{r}
+dfc3 <- dfc3 %>% 
+  mutate(
+    ebiasie_con_eb = ebiasie_arctic_eb + ebiasie_temp_eb,
+    ebiasie_lib_eb = ebiasie_ozone_eb + ebiasie_airqual_eb,
+    ebiasie_con_yn_eb = ifelse(ebiasie_con_eb == 2, 1, 0),
+    ebiasie_lib_yn_eb = ifelse(ebiasie_lib_eb == 2, 1, 0),
+  )
+
+dfc3 %>% 
+  select(ebiasie_con_eb, ebiasie_lib_eb, ebiasie_con_yn_eb, ebiasie_lib_yn_eb) %>% 
+  psych::describe()
+```
+
+```{r}
+dfc3 <- dfc3 %>% 
+  mutate(imri_ieb = case_when(
+    con == 1 ~ ifelse(ebiasie_con_yn_eb == 1 & ebiasie_lib_yn_eb == 0, 1, 0),
+    con == 0 ~ ifelse(ebiasie_con_yn_eb == 0 & ebiasie_lib_yn_eb == 1, 1, 0),
+    TRUE ~ 0
+  ))
+
+dfc3 %>% 
+  filter(imri_ieb == 1) %>% 
+  nrow()
+```
+
