@@ -1,0 +1,93 @@
+---
+title: "mutate-function-scraps"
+output: html_document
+---
+
+```{r recode-mr}
+mr_recode <- function(olddf, newdf, oldcol, itemname, updown) {
+  
+  newcolx <- paste(itemname, "x", sep = "_")
+  
+  newcoleb <- paste(itemname, "eb", sep = "_")
+  
+  newcolebyn <- paste(itemname, "ebyn", sep = "_")
+  
+  if(updown == "down") {
+    newdf <- olddf %>% 
+    mutate(newcolx = case_when(
+      oldcol == 1 ~ 3,
+      oldcol == 2 ~ 2,
+      oldcol == 3 ~ 1,
+      oldcol == 4 ~ 0,
+      oldcol == 5 ~ -1,
+      oldcol == 6 ~ -2,
+      oldcol == 7 ~ -3,
+      TRUE ~ 999),
+      newcoleb = case_when(
+        oldcol == 1 ~ 3,
+        oldcol == 2 ~ 2,
+        oldcol == 3 ~ 1,
+        oldcol >= 4 ~ 0,
+        TRUE ~ 999),
+      newcolebyn = case_when(
+        oldcol <= 3 ~ 1,
+        oldcol >= 4 ~ 0,
+        TRUE ~ 999)
+      )
+  }
+  
+  if(updown == "up") {
+    newdf <- olddf %>% 
+    mutate(newcolx = case_when(
+      oldcol == 1 ~ -3,
+      oldcol == 2 ~ -2,
+      oldcol == 3 ~ -1,
+      oldcol == 4 ~ 0,
+      oldcol == 5 ~ 1,
+      oldcol == 6 ~ 2,
+      oldcol == 7 ~ 3,
+      TRUE ~ 999),
+      newcoleb = case_when(
+        oldcol <= 4 ~ 0,
+        oldcol == 5 ~ 1,
+        oldcol == 6 ~ 2,
+        oldcol == 7 ~ 3,
+        TRUE ~ 999),
+      newcolebyn = case_when(
+        oldcol <= 4 ~ 0,
+        oldcol >= 5 ~ 1,
+        TRUE ~ 999)
+      )
+
+  }
+  
+  }
+
+test <- mr_recode(olddf = df5, newdf = "df5test", oldcol = "arctic2_1_sc", itemname = "arctic", updown = "up")
+
+```
+
+```{r}
+ `2` = 2,
+                           `3` = 1,
+                           `4` = 0,
+                           `5` = -1,
+                           `6` = -2,
+                           `7` = -3),
+           newcoleb = dplyr::recode(oldcol, `1` = 3,
+                           `2` = 2,
+                           `3` = 1,
+                           `4` = 0,
+                           `5` = 0,
+                           `6` = 0,
+                           `7` = 0),
+           newcolebyn = dplyr::recode(oldcol, `1` = 1,
+                           `2` = 1,
+                           `3` = 1,
+                           `4` = 0,
+                           `5` = 0,
+                           `6` = 0,
+                           `7` = 0)
+           
+           )
+```
