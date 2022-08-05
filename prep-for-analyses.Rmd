@@ -39,9 +39,9 @@ It is already excluding:
 dfc1 <- import(here("analysis-data", "cleaned-data.csv"))
 ```
 
-# MR Task (dfc2)
+# MR Task Scoring (cont.; dfc2)
 
-### Descriptives
+## Descriptives (x)
 ```{r}
 dfc2 %>%
   select(contains("20"), -contains("_z"), -contains("eb"), -contains("yn")) %>%
@@ -107,7 +107,7 @@ aqmodel2 <- lm(data = dfc3, formula = airqual20 ~ sc_scored + con + rav_scored)
 summary(aqmodel2)
 ```
 
-### Descriptives
+## Descriptives (eb)
 ```{r desc-eb}
 dfc2 %>%
   select(contains("20_eb"), -contains("z")) %>%
@@ -132,13 +132,14 @@ dfc2 %>%
   geom_histogram(binwidth = 1)
 ```
 
-### Descriptives
+## Descriptives (yn)
 ```{r}
 dfc2 %>%
   select(contains("20_yn")) %>%
   psych::describe()
 ```
 
+## Score (eb, cont.)
 ```{r score-mr-eb}
 dfc2 <- dfc2 %>% 
   mutate(con_plot = arctic20_eb + temp20_eb,
@@ -147,8 +148,6 @@ dfc2 <- dfc2 %>%
          lib_plot_z = scale(lib_plot))
 
 ```
-
-## Score (eb)
 
 ## Score (yn)
 
