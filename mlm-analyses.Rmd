@@ -1,0 +1,108 @@
+---
+title: "mlm-analyses"
+output:
+  html_document:
+    theme: cosmo
+    toc: true
+    toc_depth: 4
+    toc_float:
+      collapsed: false
+---
+
+# Libraries
+```{r load-libs, message=F, warning=F}
+library(rio)
+library(here)
+library(tidyverse)
+library(janitor)
+library(ggplot2)
+library(lme4)
+```
+
+```{r import-data}
+dfmlm <- import(here("analysis-data", "cleaned-data.csv"))
+```
+
+```{r}
+dfmlm1 <- dfmlm %>% 
+  pivot_longer(., cols = c(prac2_1_sc, arctic2_1_sc, temp2_1_sc, ozone2_1_sc,
+                           air_qual2_1_sc, dia_tho2_1_sc, co22_1_sc, 
+                           ice_sheets2_1_sc, quake2_1_sc),
+               names_to = "item",
+               values_to = "response",
+               values_drop_na = T)
+```
+
+```{r}
+dfmlm2 <- dfmlm1 %>% 
+  select(id, con, conservatism_f, item, response, sc_scored, sc_scoredz, 
+         rav_scored, rav_scoredz) %>% 
+  mutate(item_slope = factor(case_when(
+    item == "arctic2_1_sc" | item == "ozone2_1_sc" | item == "ice_sheets2_1_sc" |
+      item == "air_qual2_1_sc" ~ "neg",
+    item == "temp2_1_sc" | item == "dia_tho2_1_sc" | item == "co22_1_sc" ~ "pos",
+    item == "prac2_1_sc" | item == "quake2_1_sc" ~ "zero"
+  )),
+  item_ambiguous = factor(case_when(
+    item == "arctic2_1_sc" | item == "temp2_1_sc" | item == "ozone2_1_sc" | 
+      item == "air_qual2_1_sc" | item == "dia_tho2_1_sc" ~ "1",
+    item == "quake2_1_sc" | item == "co22_1_sc" | item == "ice_sheets2_1_sc" |
+      item == "prac2_1_sc" ~ "0" 
+  )),
+  item_mr = factor(case_when(
+    item == "arctic2_1_sc" | item == "temp2_1_sc" ~ "con",
+    item == "ozone2_1_sc" | item == "air_qual2_1_sc" ~ "lib",
+    item == "dia_tho2_1_sc" | item == "quake2_1_sc" | item == "co22_1_sc" | 
+      item == "ice_sheets2_1_sc" | item == "prac2_1_sc" ~ "filler" 
+  )),
+  item_political = factor(case_when(
+    item == "arctic2_1_sc" | item == "temp2_1_sc" | item == "ozone2_1_sc" | 
+      item == "air_qual2_1_sc" | item == "co22_1_sc" | 
+      item == "ice_sheets2_1_sc" ~ "1",
+    item == "dia_tho2_1_sc" | item == "quake2_1_sc" | item == "prac2_1_sc" ~ "0" 
+  )),
+  item = factor(item),
+  response = as.numeric(response),
+  id = factor(id),
+  conservatism_f = as.numeric(conservatism_f),
+  sc_scored = as.numeric(sc_scored),
+  rav_scored = as.numeric(rav_scored)
+  )
+```
+
+```{r}
+int_model1 <- lmer(response ~ 1 + (1 | item), data = dfmlm2)
+
+summary(int_model1)
+
+int_model2 <- lmer(response ~ 1 + (1 | item) + (1 | id), data = dfmlm2)
+
+summary(int_model2)
+
+anova(int_model1, int_model2)
+```
+
+```{r}
+model3 <- lmer(response ~ 1 + conservatism_f + (1 + conservatism_f | item) + 
+                 (1 + conservatism_f | id), data = dfmlm2)
+
+summary(model3)
+
+anova(int_model2, model3)
+```
+
+
+```{r}
+#"broom.mixed" package does this so you don't have to do it by hand (like below)
+int_model %>% 
+  VarCorr() %>% # get random effects (Var corr matrix)
+  as_tibble() %>% # turn into a tibble
+  select(grp, vcov) %>% # select the grp (label) and vcov (variance)
+  spread(grp, vcov) %>% # spread them out into columns
+  transmute(icc = schoolid / (schoolid + Residual)) %>% # calculate ICC
+  as.numeric()
+
+icc # this doesn't do sig testing bc this is currently under debate
+```
+
+

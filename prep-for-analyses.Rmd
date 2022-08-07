@@ -42,7 +42,7 @@ dfc1 <- import(here("analysis-data", "cleaned-data.csv"))
 # MR Task Scoring (cont.; dfc2)
 
 ## Descriptives (x)
-```{r}
+```{r desc-mr-items-by-ideology}
 dfc2 %>%
   select(contains("20"), -contains("_z"), -contains("eb"), -contains("yn")) %>%
   psych::describe()
@@ -81,7 +81,7 @@ dfc2 %>%
   geom_histogram(binwidth = 1)
 ```
 
-```{r}
+```{r item-linear-models}
 amodel1 <- lm(data = dfc3, formula = arctic20 ~ con + rav_scored)
 summary(amodel1)
 
@@ -133,7 +133,7 @@ dfc2 %>%
 ```
 
 ## Descriptives (yn)
-```{r}
+```{r desc-yn}
 dfc2 %>%
   select(contains("20_yn")) %>%
   psych::describe()
@@ -165,7 +165,7 @@ dfc3 %>%
   psych::describe()
 ```
 
-```{r}
+```{r arc-log-model}
 arcticmodel1 <- glm(data = dfc3, formula = ebiasiz15_arctic ~ con + rav_scored, family = "binomial")
 summary(arcticmodel1)
 
@@ -173,7 +173,7 @@ arcticmodel2 <- glm(data = dfc3, formula = ebiasiz15_arctic ~ sc_scored + con + 
 summary(arcticmodel2)
 ```
 
-```{r}
+```{r temp-log-model}
 tempmodel1 <- glm(data = dfc3, formula = ebiasiz15_temp ~ con + rav_scored, family = "binomial")
 summary(tempmodel1)
 
@@ -181,7 +181,7 @@ tempmodel2 <- glm(data = dfc3, formula = ebiasiz15_temp ~ sc_scored + con + rav_
 summary(tempmodel2)
 ```
 
-```{r}
+```{r ozone-log-model}
 ozonemodel1 <- glm(data = dfc3, formula = ebiasiz15_ozone ~ con + rav_scored, family = "binomial")
 summary(ozonemodel1)
 
@@ -189,7 +189,7 @@ ozonemodel2 <- glm(data = dfc3, formula = ebiasiz15_ozone ~ sc_scored + con + ra
 summary(ozonemodel2)
 ```
 
-```{r}
+```{r airqual-log-model}
 airqualmodel1 <- glm(data = dfc3, formula = ebiasiz15_airqual ~ con + rav_scored, family = "binomial")
 summary(airqualmodel1)
 

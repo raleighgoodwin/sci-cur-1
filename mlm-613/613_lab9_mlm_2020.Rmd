@@ -19,7 +19,7 @@ library(rio)
 library(tidyverse)
 
 nels_88 <- import("613_Lab09_NELS88.sav") %>% 
-  factorize() %>% 
+  # factorize() %>% 
   janitor::clean_names()
 
 str(nels_88)

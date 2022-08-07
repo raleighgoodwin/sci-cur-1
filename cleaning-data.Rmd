@@ -90,6 +90,7 @@ df2 %>%
 df3 <- df2 %>% 
   filter(duration_ex != 1)
 ```
+
 ### N (df3)
 ```{r df3-N}
 df3 %>% 
@@ -521,12 +522,22 @@ df7 <- df7 %>%
          nq_plot_score_z = scale(nq_plot_score))
 
 df7 <- df7 %>% 
-  mutate(bad_plot_score = ifelse(n_plot_score_z <= -3, 1, 0),
-         bad_plot_score_q = ifelse(nq_plot_score_z <= -3, 1, 0)
+  mutate(bad_plot_score = ifelse(n_plot_score_z >= 3, 1, 0),
+         bad_plot_score_q = ifelse(nq_plot_score_z >= 3, 1, 0)
          ) # turns out no diff btwn no q and _q so can just use no q
 ```
 
-## No Outliers
+```{r}
+df7 %>% 
+  ggplot(aes(x = n_plot_score_z)) +
+  geom_histogram()
+
+df7 %>% 
+  filter(n_plot_score_z >= 3) %>% 
+  select(con, contains("20_eb"))
+```
+
+## Outliers
 ```{r id-mr-outliers}
 df7 %>% 
   select(contains("bad_plot_score")) %>% 
