@@ -40,6 +40,9 @@ df1 <- import(here("prepped-data", "joined-data.csv"))
 ```{r df1-N}
 df1 %>% 
   nrow()
+
+df1 <- df1 %>% 
+  filter(dem_age_b > 18)
 ```
 
 # Cleaning (df2)
@@ -202,7 +205,10 @@ df4 <- df3 %>%
            is.na(act10c1_2_sc) == T ~ "0")),
          sc_scimu = if_else(act_scib_sc > 0, 1, 0),
          sc_scimu_c19 = if_else(act_scic_sc > 0, 1, 0),
-         sc_read = if_else(read_article_sc == 2, 1, 0),
+         sc_read = case_when(
+           read_article_sc == 2 ~ 1,
+           TRUE ~ 0
+         ),#if_else(read_article_sc == 2, 1, 0),
          sc_share_yn = if_else(share_freq1_sc == 1, 0, 1),
          sc_share_tech_na = recode(share_freq2_6_sc, `1` = 1,
                                 `2` = 2,

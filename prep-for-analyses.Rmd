@@ -43,6 +43,8 @@ dfc1 <- import(here("analysis-data", "cleaned-data.csv"))
 
 ## Descriptives (x)
 ```{r desc-mr-items-by-ideology}
+dfc2 <- dfc1
+
 dfc2 %>%
   select(contains("20"), -contains("_z"), -contains("eb"), -contains("yn")) %>%
   psych::describe()
@@ -150,6 +152,12 @@ dfc2 <- dfc2 %>%
 ```
 
 ## Score (yn)
+
+# Save
+
+```{r}
+write.csv(dfc2, "./analysis-data/prepped-for-analysis-data.csv")
+```
 
 # IMRI
 ## z >= 1.5
@@ -283,4 +291,6 @@ dfc3 %>%
   filter(imri_ieb == 1) %>% 
   nrow()
 ```
+
+
 

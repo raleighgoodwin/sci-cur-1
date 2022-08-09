@@ -80,6 +80,11 @@ dfq_b1 <- dfq_b1 %>%
   filter(finished == 1 & consent == 1) # only finished and consenting obs
 ```
 
+```{r}
+dfq_b1 <- dfq_b1 %>% 
+  filter(dem_age >= 18) # only Ss 18 or older
+```
+
 ```{r col-names-b}
 bcols <- dfq_b1 %>% # renaming items for clarity
   colnames()
