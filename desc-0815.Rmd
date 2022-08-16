@@ -1,0 +1,28 @@
+---
+title: "What's going on in the data?"
+subtitle: "Descriptives and other oddities..."
+author: Raleigh Goodwin
+date: "August 16, 2022"
+output: 
+  beamer_presentation:
+    colortheme: "seahorse"
+---
+
+```{r include=FALSE}
+knitr::opts_chunk$set(message=F, warning=F)
+```
+
+```{r lib, echo=F}
+# Load libraries
+library(rio)
+library(here)
+library(tidyverse)
+library(ggplot2)
+library(lme4)
+library(knitr)
+library(janitor)
+library(Hmisc)
+library(reshape2)
+library(viridis)
+library(kableExtra)
+```
