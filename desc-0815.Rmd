@@ -1,5 +1,5 @@
 ---
-title: "What's going on in the data?"
+title: "Science Curiosity Study 1 Data"
 subtitle: "Descriptives and other oddities..."
 author: Raleigh Goodwin
 date: "August 16, 2022"
@@ -8,7 +8,7 @@ output:
     colortheme: "seahorse"
 ---
 
-```{r include=FALSE}
+```{r mess-warn, include=FALSE}
 knitr::opts_chunk$set(message=F, warning=F)
 ```
 
@@ -26,3 +26,273 @@ library(reshape2)
 library(viridis)
 library(kableExtra)
 ```
+
+```{r data, echo=F}
+dfd1 <- import(here("analysis-data", "cleaned-data0815.csv"))
+dfd1_dt <- import(here("analysis-data", "cleaned-data0815-exdt.csv"))
+dfd1_flr <- import(here("analysis-data", "cleaned-data0815-exflr.csv"))
+
+dfd1_lc <- dfd1 %>% 
+  filter(conservatism_f != 4 | con != 0)
+dfd1_lcdt <- dfd1_dt %>% 
+  filter(conservatism_f != 4 | con != 0)
+dfd1_lcflr <- dfd1_flr %>% 
+  filter(conservatism_f != 4 | con != 0)
+```
+
+# Participants
+
+```{r Ss, echo=F}
+n_total <- dfd1 %>% 
+  nrow()
+
+n_total_lc <- dfd1_lc %>% 
+  nrow()
+
+n_by_con <- dfd1 %>% 
+  group_by(con) %>% 
+  summarise(n = n(),
+            percent = round(100 * (n()/nrow(dfd1)), 2))
+
+n_by_con_lc <- dfd1_lc %>% 
+  group_by(con) %>% 
+  summarise(n = n(),
+            percent = round(100 * (n()/nrow(dfd1_lc)), 2))
+
+df_age <- dfd1_lc %>% 
+  select(dem_age_b) %>% 
+  psych::describe()
+
+m_age <- df_age$mean %>% 
+  round(2)
+min_age <- df_age$min %>% 
+  round(2)
+max_age <- df_age$max %>% 
+  round(2)
+
+df_gender <- dfd1_lc %>% 
+  group_by(gender_b) %>% 
+  summarise(n = n(),
+            percent = round(100 *(n()/nrow(dfd1)),2))
+
+df_race <- dfd1_lc %>% 
+  group_by(race_b) %>% 
+  summarise(n = n(),
+            percent = round(100 *(n()/nrow(dfd1)),2))
+```
+
+N$_{total}$ = `r n_total`: N$_{con}$ = `r n_by_con[3,2]`, N$_{lib}$ = `r n_by_con[1,2]`, N$_{mod}$ = `r n_by_con[2,2]`
+
+## N$_{final}$ = `r n_total_lc`
+
+- **Political ideology:** `r n_by_con_lc[2,3]`% conservative, `r n_by_con_lc[1,3]`% liberal
+- **Age:** Mean$_{age}$ = `r m_age` (range: `r min_age`-`r max_age`)
+- **Gender:** `r df_gender[3,3]`% women, `r df_gender[1,3]`% men, `r df_gender[2,3]`% non-binary folks, `r df_gender[4,3]`% preferred not to answer
+- **Race:** `r df_race[1,3]`% White, `r df_race[2,3]`% Black, `r df_race[3,3]`% Hispanic, `r df_race[4,3]`% Asian
+
+---
+
+```{r basic-desc-tab, echo=F}
+scrpm_tab <- dfd1_lc %>% 
+  mutate(RPM = rav_scored,
+         SciCuriosity = sc_scored,
+         ArcticIce = arctic20,
+         GlobalTemp = temp20,
+         OzoneHole = ozone20,
+         AirQuality = airqual20,
+         CO2 = co220,
+         IceSheets = icesheets20,
+         BacteriaPop = diatho20,
+         EarthquakeMag = quake20) %>% 
+  select(SciCuriosity, RPM, ArcticIce, GlobalTemp, OzoneHole, AirQuality, IceSheets, BacteriaPop, EarthquakeMag) %>% 
+  psych::describe() %>% 
+  mutate(Min = min,
+         Max = max,
+         Mean = round(mean, 2),
+         SD = round(sd, 2),
+         Median = median,
+         Skew = round(skew, 2)) %>% 
+  as.data.frame() %>% 
+  select(Min, Max, SD, Mean, Median, Skew) %>% 
+  kable()
+```
+
+# Basic Descriptives
+
+`r scrpm_tab`
+
+# Correlations
+
+```{r mlm-attempt, echo=F, eval=F}
+# rcorr(dfd1_lc$sc_scored, dfd1_lc$rav_scored)
+
+sc_1 <- lm(sc_scored ~ 1, dfd1_lc)
+summary(sc_1)
+scrpm <- lm(sc_scored ~ 1 + rav_scored, dfd1_lc)
+summary(scrpm)
+anova(sc_1, scrpm)
+```
+
+```{r cor-map, echo=F}
+dfp_corr <- dfd1_lc %>% 
+  select(conservatism_f, sc_scored, rav_scored, arctic20, temp20, ozone20, airqual20, co220, icesheets20, diatho20, quake20) %>% 
+  mutate(Con = conservatism_f,
+         SciCur = sc_scored,
+         RPM = rav_scored,
+         Arctic = arctic20,
+         Temp = temp20,
+         Ozone = ozone20,
+         AirQual = airqual20,
+         CO2 = co220,
+         IceSheets = icesheets20,
+         Bacteria = diatho20,
+         Quake = quake20) %>% 
+  select(-contains("20"), -contains("scored"), -contains("_f"))
+
+get_upper_tri <- function(cormat){
+    cormat[lower.tri(cormat)]<- NA
+    return(cormat)
+  }
+
+cor(dfp_corr) %>% 
+  get_upper_tri() %>% 
+  melt() %>% 
+  ggplot(aes(x = Var1, y = Var2, fill = value)) +
+  geom_tile(color = "white") +
+  scale_fill_viridis(limits = c(-1,1), discrete=FALSE, option = "A",
+                     name="Pearson\nCorrelation") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 25, vjust = 1, 
+    size = 13, hjust = 1)) +
+  coord_fixed() +
+  geom_text(aes(Var1, Var2, label = round(value, 2)), color = "white", size = 3) +
+  theme(
+    axis.text.y = element_text(size = 13),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+  panel.background = element_blank(),
+  panel.grid.major = element_blank()) +
+  labs(caption = "Conservatism (Con): Extremely liberal (1) to Extremely conservative (7).")
+```
+
+---
+
+# Descriptives by Ideology
+
+```{r desc-table-ideo, echo=F}
+desc_mr_var_names <- dfd1_lc %>% 
+  mutate(RPM = rav_scored,
+         SciCuriosity = sc_scored,
+         ArcticIce = arctic20,
+         GlobalTemp = temp20,
+         OzoneHole = ozone20,
+         AirQuality = airqual20,
+         CO2 = co220,
+         IceSheets = icesheets20,
+         Bacteria = diatho20,
+         Earthquakes = quake20,
+         Con = con)
+
+desc_mr_con <- desc_mr_var_names %>% 
+  filter(Con == 1) %>% 
+  select(SciCuriosity, RPM, ArcticIce, GlobalTemp, OzoneHole, AirQuality, IceSheets, Bacteria, Earthquakes) %>%
+  psych::describe()%>% 
+  mutate(C_Min = min,
+         C_Max = max,
+         M_c = round(mean, 2),
+         SD_c = round(sd, 2),
+         C_Median = median,
+         Skew_c = round(skew, 2)) %>% 
+  as.data.frame() %>% 
+  select(M_c, SD_c, Skew_c)
+
+desc_mr_lib <- desc_mr_var_names %>% 
+  filter(Con == -1) %>% 
+  select(SciCuriosity, RPM, ArcticIce, GlobalTemp, OzoneHole, AirQuality, IceSheets, Bacteria, Earthquakes) %>%
+  psych::describe()%>% 
+  mutate(L_Min = min,
+         L_Max = max,
+         M_l = round(mean, 2),
+         SD_l = round(sd, 2),
+         L_Median = median,
+         Skew_l = round(skew, 2)) %>% 
+  as.data.frame() %>% 
+  select(M_l, SD_l, Skew_l)
+
+desc_mr <- cbind(desc_mr_con, desc_mr_lib) %>% 
+  select(contains("_c"), contains("_l")) %>% 
+  kable() %>% 
+  add_header_above(c(" " = 1, "Conservative" = 3, "Liberal" = 3))
+```
+
+`r desc_mr`
+
+---
+
+```{r prep-for-plot, echo=F}
+desc_long <- desc_mr_var_names %>% 
+  pivot_longer(cols = c(SciCuriosity, RPM, ArcticIce, GlobalTemp, OzoneHole, AirQuality, IceSheets, Bacteria, Earthquakes), names_to = "Variable", values_to = "Score")
+
+desc_long_mr <- desc_long %>% 
+  filter(Variable != "SciCuriosity" & Variable != "RPM") 
+```
+
+# Descriptives by Ideology
+ 
+```{r cont-plot, echo=F}
+desc_long_cont <- desc_long %>% 
+  filter(Variable == "SciCuriosity" | Variable == "RPM")
+
+# desc_long_cont %>% 
+#   select(Score) %>% 
+#   unique()
+
+desc_long_cont %>% 
+  ggplot(., aes(x = as.factor(Con), y = Score, fill = as.factor(Con))) + 
+  stat_summary(geom = "bar", fun = "mean", position = "dodge") +
+  facet_wrap(~Variable, scales = "free_y") +
+  scale_x_discrete(labels = c("Lib", "Con")) +
+  scale_fill_manual(values = c("deepskyblue3", "brown3")) +
+  theme_bw() +
+  labs(title = "Average Cognitive Ability and Science Curiosity",
+       y = "Average Score",
+       x = "Ideology") +
+  theme(axis.text.x = element_text(size = 12),
+        axis.text.y = element_text(size = 12),
+        axis.title.x = element_text(size = 14),
+        axis.title.y = element_text(size = 14),
+        legend.position = "none",
+        plot.title = element_text(size = 16, face = "bold", hjust = .5))
+```
+ 
+---
+
+# Endpoint Bias by Ideology
+
+```{r eb-ideo-plot, echo=F}
+desc_long_mr %>% 
+  ggplot(., aes(x = Variable, y = Score, fill = as.factor(Con))) + 
+  stat_summary(geom = "bar", fun = "mean", position = "dodge") +
+  scale_fill_manual(values = c("deepskyblue3", "brown3"), name = "Ideology", labels = c("Lib", "Con")) +
+  theme_bw() +
+  scale_y_continuous(limits = c(-3, 1), breaks = seq(from  = -3, to = 1, by = .5)) +  
+  labs(title = "Average Scores on Motivated Reasoning Items",
+       subtitle = "Higher scores indicate more endpoint bias.",
+       y = "Average Score",
+       x = "Item") +
+  theme(axis.text.x = element_text(angle = 45, size = 12, vjust = .6),
+        axis.text.y = element_text(size = 12),
+        axis.title.x = element_text(size = 14),
+        axis.title.y = element_text(size = 14),
+        legend.text = element_text(size = 12),
+        legend.title = element_text(size = 12),
+        plot.title = element_text(size = 16, face = "bold", hjust = .5),
+        plot.subtitle = element_text(size = 12, hjust = .13))
+```
+
+---
+
+# Conclusion
+
+- idk yet
+
