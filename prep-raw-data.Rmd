@@ -10,6 +10,9 @@ output:
 ---
 
 # Libraries
+
+Load necessary packages.
+
 ```{r load-libs, message=F, warning=F}
 library(rio)
 library(here)
@@ -18,6 +21,9 @@ library(janitor)
 ```
 
 # Baseline Data
+
+Import baseline data.
+
 ```{r import-b-data}
 # mturk
 dfm_bp <- import(here("data", "baselinep-data.csv")) %>% 
@@ -36,9 +42,14 @@ dfq_b <- import(here("data", "qual-baseline-data.csv")) %>%
 ```
 
 ## MTurk
+
+Join separate HITs into one df.
+
 ```{r bind-b}
 dfm_b <- rbind(dfm_bp, dfm_b1) # bind HIT dfs
 ```
+
+Identify duplicates and approved responses.
 
 ```{r id-dup/app-b}
 dfm_b_dup <- dfm_b %>% 
@@ -50,43 +61,46 @@ dfm_b_app <- dfm_b %>%
 ```
 
 ### Save dfs
+
+Save MTurk df of approved responses and df of duplicate responses.
+
 ```{r save-dfs-bm}
-write.csv(dfm_b_app, "./prepped-data/sep-dfs/b-mturk-app-data.csv")
-write.csv(dfm_b_dup, "./prepped-data/sep-dfs/b-mturk-dup-data.csv")
+write.csv(dfm_b_app, "./prepped-data/sep-dfs/b-mturk-app-data0815.csv")
+write.csv(dfm_b_dup, "./prepped-data/sep-dfs/b-mturk-dup-data0815.csv")
 ```
 
 ## Qualtrics
 
 Excluding:
 
-* Duplicates
 * Unapproved
+* Duplicates
+* Unfinished
+* Did not consent
+* Under 18
 
-```{r ex-dup/app-b}
+```{r ex-b}
 dfq_b1 <- dfq_b %>% 
-  filter(id %in% dfm_b_app$id & !id %in% dfm_b_dup$id) # filter out unapproved/
-# duplicate observations
-```
+  filter(id %in% dfm_b_app$id) # filter out unapproved
 
-Excluding:
-
-* Duplicates
-* Unapproved
-* **Unfinished**
-* **Did not consent**
-
-```{r ex-fin/con-b}
 dfq_b1 <- dfq_b1 %>% 
-  filter(finished == 1 & consent == 1) # only finished and consenting obs
+  filter(!id %in% dfm_b_dup$id) # filter out duplicates
+
+dfq_b1 <- dfq_b1 %>% 
+  filter(finished == 1) # filter out unfinished
+
+dfq_b1 <- dfq_b1 %>% 
+  filter(consent == 1) # filter out no consent
+
+dfq_b1 <- dfq_b1 %>% 
+  filter(dem_age >= 18 & dem_age != 4) # only Ss 18 or older (for some reason it
+# won't exclude this person who reported their age as 4 unless I specify it)
 ```
 
-```{r}
-dfq_b1 <- dfq_b1 %>% 
-  filter(dem_age >= 18) # only Ss 18 or older
-```
+Renaming variable names to distinguish baseline data from study data.
 
 ```{r col-names-b}
-bcols <- dfq_b1 %>% # renaming items for clarity
+bcols <- dfq_b1 %>%
   colnames()
 
 bcols1 <- rep(NA, length(bcols))
@@ -104,11 +118,17 @@ dfq_b1 <- dfq_b1 %>%
 ```
 
 ### Save dfs
+
+Save Qualtrics df excluding duplicates and unapproved.
+
 ```{r save-df-bq}
-write.csv(dfq_b1, "./prepped-data/sep-dfs/b-qual-data.csv")
+write.csv(dfq_b1, "./prepped-data/sep-dfs/b-qual-data0815-agefixed.csv")
 ```
 
 # Sci Cur Data
+
+Import study data.
+
 ```{r import-data-sc}
 # mturk
 dfm_con1 <- import(here("data", "mturk-data-con1.csv")) %>% 
@@ -137,9 +157,14 @@ dfq <- import(here("data", "qual-data.csv")) %>%
 ```
 
 ## MTurk
+
+Bind dfs of diff HITs.
+
 ```{r bind-scm}
 dfm <- rbind(dfm_con1, dfm_con2, dfm_lib1, dfm_lib2) # bind mturk data into 1 df
 ```
+
+Identify, inspect, and exclude duplicate responses and unapproved responses.
 
 ```{r id-dup-scm}
 dfm_dup <- dfm %>% 
@@ -168,18 +193,26 @@ dfm_app <- dfm_nodup %>%
   filter(approval_status == "Approved") # identify approved
 ```
 
+Create "key" df matching participant data w/ "batch" info.
+
 ```{r batch-sc}
 dfm_batch <- dfm_app %>% 
   select(id, batch)
 ```
 
 ### Save dfs
+
+Save MTurk df accounting for exclusions and batch "key" df.
+
 ```{r save-dfs-scm}
-write.csv(dfm_app, "./prepped-data/sep-dfs/s1-mturk-app-data.csv")
-write.csv(dfm_batch, "./prepped-data/sep-dfs/s1-mturk-batch-data.csv")
+write.csv(dfm_app, "./prepped-data/sep-dfs/s1-mturk-app-data0815.csv")
+write.csv(dfm_batch, "./prepped-data/sep-dfs/s1-mturk-batch-data0815.csv")
 ```
 
 ## Qualtrics
+
+Identify and inspect duplicates.
+
 ```{r id-dup-scq, echo=F, eval=F}
 dfq_dup <- dfq %>% 
   filter(id %in% dup_id)
@@ -189,13 +222,29 @@ dfq_dup %>%
   summarise(n = n()) %>% 
   filter(n > 1) # identify duplicates
 
+# taking a look to see whether can keep one of the responses
 # dfq_dup %>% 
 #   filter(id == "A2IQ0QCTQ3KWLT" | id == "A2YC6PEMIRSOAA" | id == "A3F9IQB0297J9D") %>% 
 #   select(start_date, end_date, id, finished, duration_in_seconds, consent1,
 #          bad_resp, cheat)
-# 
-# dfq %>% 
-#   filter(!id %in% dup_id & id %in% dfm_app$id)
+```
+
+Identify responses that are outliers in duration.
+
+```{r}
+dfq <- dfq %>% 
+  mutate(duration = as.numeric(duration_in_seconds),
+         duration_z = scale(duration),
+         duration_ex = case_when(
+           duration_z >= 3 ~ "1", # z score duration times to exclude outliers
+           duration_z <= -3 ~ "1",
+           TRUE ~ "0"
+         ))
+
+# dfq1 %>%
+#   group_by(duration_ex) %>% 
+#   select(duration_in_seconds) %>% 
+#   summarise(n = n())
 ```
 
 Excluding:
@@ -204,18 +253,35 @@ Excluding:
 * Unfinished
 * Reported cheating
 * Reported bad response
-* Unapproved
 * Did not consent
+* Unapproved
+* **Outliers**
+  + **Duration (1)**
 
-```{r ex-dup/fin/cheat/bad/con/app-sc}
+```{r ex-sc}
 dfq1 <- dfq %>% 
-  filter(!id %in% dup_id & finished == 1 & cheat == 3 & bad_resp == 1 &
-           consent1 == 1 & id %in% dfm_app$id) # exlude duplicates and 
-# Ss who reported cheating or responding randomly/while distracted, select
-# only finished and approved HITs
+  filter(!id %in% dup_id) # exclude duplicates
 
-# nEED TO CREATE A MISSINGNESS VARIABLE TO FILTER W -- MORE THAN 5%****
+dfq1 <- dfq1 %>% 
+  filter(finished == 1) # exclude unfinished
+
+dfq1 <- dfq1 %>% 
+  filter(cheat == 3) # exclude reported cheating
+
+dfq1 <- dfq1 %>% 
+  filter(bad_resp == 1) # exclude reported bad responding
+
+dfq1 <- dfq1 %>% 
+  filter(consent1 == 1) # exclude no consent
+
+dfq1 <- dfq1 %>% 
+  filter(id %in% dfm_app$id) # exclude unapproved
+
+dfq1 <- dfq1 %>% 
+  filter(duration_ex == 0) # exclude duration outliers
 ```
+
+Alter column names to avoid confusion between baseline and study variables.
 
 ```{r col-names-sc}
 cols <- dfq1 %>% 
@@ -235,12 +301,13 @@ dfq1 <- dfq1 %>%
   rename(., id = id_sc)
 ```
 
+Join study Qualtrics data with "batch" information.
+
 ```{r join-batch-sc}
 dfq2 <- inner_join(dfq1, dfm_batch, by = "id", all = F)
-
-# dfq2 %>% 
-#   select(batch)
 ```
+
+Take a look at the resulting df.
 
 ```{r batch/dup-sc, echo=F, eval=F}
 # dfq2 %>% 
@@ -271,15 +338,16 @@ dfq2 <- inner_join(dfq1, dfm_batch, by = "id", all = F)
 ```
 
 ### Save dfs
+
+Save cleaned (exclusions applied) Qualtrics study df.
+
 ```{r save-dfs-scq}
-write.csv(dfq2, "./prepped-data/sep-dfs/s1-qual-data.csv")
-write.csv(dfq_b1, "./prepped-data/sep-dfs/b-qual-data.csv")
+write.csv(dfq2, "./prepped-data/sep-dfs/s1-qual-data0815-exdur.csv")
 ```
 
 # Join (df1)
-```{r join-all}
-dfj <- inner_join(dfq2, dfq_b1, by = "id", all = F) # join baseline and study 1 q data
-```
+
+Join baseline and study Qualtrics dfs (thus excluding any Ss not in both dfs).
 
 Excluding:
 
@@ -287,12 +355,20 @@ Excluding:
 * Unfinished
 * Reported cheating
 * Reported bad response
-* Unapproved
 * Did not consent
+* Unapproved
 * **Was not in both dfs (b and s1)**
+* Outliers
+  + Duration (1)
 
-## Save dfs
-```{r save-final-df}
-write.csv(dfj, "./prepped-data/joined-data.csv")
+```{r join-all}
+dfj <- inner_join(dfq2, dfq_b1, by = "id", all = F) # join baseline and study 1 q data
 ```
 
+## Save dfs
+
+Save final, joined df. 
+
+```{r save-final-df}
+write.csv(dfj, "./prepped-data/joined-data0815.csv")
+```

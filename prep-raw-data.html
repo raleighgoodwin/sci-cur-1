@@ -252,6 +252,7 @@ div.tocify {
 
 <div id="libraries" class="section level1">
 <h1>Libraries</h1>
+<p>Load necessary packages.</p>
 <pre class="r"><code>library(rio)
 library(here)
 library(tidyverse)
@@ -259,6 +260,7 @@ library(janitor)</code></pre>
 </div>
 <div id="baseline-data" class="section level1">
 <h1>Baseline Data</h1>
+<p>Import baseline data.</p>
 <pre class="r"><code># mturk
 dfm_bp &lt;- import(here(&quot;data&quot;, &quot;baselinep-data.csv&quot;)) %&gt;% 
   clean_names() %&gt;% 
@@ -275,7 +277,9 @@ dfq_b &lt;- import(here(&quot;data&quot;, &quot;qual-baseline-data.csv&quot;)) %
   clean_names() # import</code></pre>
 <div id="mturk" class="section level2">
 <h2>MTurk</h2>
+<p>Join separate HITs into one df.</p>
 <pre class="r"><code>dfm_b &lt;- rbind(dfm_bp, dfm_b1) # bind HIT dfs</code></pre>
+<p>Identify duplicates and approved responses.</p>
 <pre class="r"><code>dfm_b_dup &lt;- dfm_b %&gt;% 
   group_by(id) %&gt;% 
   filter(n() &gt; 1) # identify duplicates
@@ -284,30 +288,38 @@ dfm_b_app &lt;- dfm_b %&gt;%
   filter(approval_status == &quot;Approved&quot;) # identify approved HITs</code></pre>
 <div id="save-dfs" class="section level3">
 <h3>Save dfs</h3>
-<pre class="r"><code>write.csv(dfm_b_app, &quot;./prepped-data/sep-dfs/b-mturk-app-data.csv&quot;)
-write.csv(dfm_b_dup, &quot;./prepped-data/sep-dfs/b-mturk-dup-data.csv&quot;)</code></pre>
+<p>Save MTurk df of approved responses and df of duplicate responses.</p>
+<pre class="r"><code>write.csv(dfm_b_app, &quot;./prepped-data/sep-dfs/b-mturk-app-data0815.csv&quot;)
+write.csv(dfm_b_dup, &quot;./prepped-data/sep-dfs/b-mturk-dup-data0815.csv&quot;)</code></pre>
 </div>
 </div>
 <div id="qualtrics" class="section level2">
 <h2>Qualtrics</h2>
 <p>Excluding:</p>
 <ul>
-<li>Duplicates</li>
 <li>Unapproved</li>
+<li>Duplicates</li>
+<li>Unfinished</li>
+<li>Did not consent</li>
+<li>Under 18</li>
 </ul>
 <pre class="r"><code>dfq_b1 &lt;- dfq_b %&gt;% 
-  filter(id %in% dfm_b_app$id &amp; !id %in% dfm_b_dup$id) # filter out unapproved/
-# duplicate observations</code></pre>
-<p>Excluding:</p>
-<ul>
-<li>Duplicates</li>
-<li>Unapproved</li>
-<li><strong>Unfinished</strong></li>
-<li><strong>Did not consent</strong></li>
-</ul>
-<pre class="r"><code>dfq_b1 &lt;- dfq_b1 %&gt;% 
-  filter(finished == 1 &amp; consent == 1) # only finished and consenting obs</code></pre>
-<pre class="r"><code>bcols &lt;- dfq_b1 %&gt;% # renaming items for clarity
+  filter(id %in% dfm_b_app$id) # filter out unapproved
+
+dfq_b1 &lt;- dfq_b1 %&gt;% 
+  filter(!id %in% dfm_b_dup$id) # filter out duplicates
+
+dfq_b1 &lt;- dfq_b1 %&gt;% 
+  filter(finished == 1) # filter out unfinished
+
+dfq_b1 &lt;- dfq_b1 %&gt;% 
+  filter(consent == 1) # filter out no consent
+
+dfq_b1 &lt;- dfq_b1 %&gt;% 
+  filter(dem_age &gt;= 18 &amp; dem_age != 4) # only Ss 18 or older (for some reason it
+# won&#39;t exclude this person who reported their age as 4 unless I specify it)</code></pre>
+<p>Renaming variable names to distinguish baseline data from study data.</p>
+<pre class="r"><code>bcols &lt;- dfq_b1 %&gt;%
   colnames()
 
 bcols1 &lt;- rep(NA, length(bcols))
@@ -324,12 +336,14 @@ dfq_b1 &lt;- dfq_b1 %&gt;%
   rename(., id = id_b) # keep id the same for joining</code></pre>
 <div id="save-dfs-1" class="section level3">
 <h3>Save dfs</h3>
-<pre class="r"><code>write.csv(dfq_b1, &quot;./prepped-data/sep-dfs/b-qual-data.csv&quot;)</code></pre>
+<p>Save Qualtrics df excluding duplicates and unapproved.</p>
+<pre class="r"><code>write.csv(dfq_b1, &quot;./prepped-data/sep-dfs/b-qual-data0815-agefixed.csv&quot;)</code></pre>
 </div>
 </div>
 </div>
 <div id="sci-cur-data" class="section level1">
 <h1>Sci Cur Data</h1>
+<p>Import study data.</p>
 <pre class="r"><code># mturk
 dfm_con1 &lt;- import(here(&quot;data&quot;, &quot;mturk-data-con1.csv&quot;)) %&gt;% 
   clean_names() %&gt;% 
@@ -356,7 +370,9 @@ dfq &lt;- import(here(&quot;data&quot;, &quot;qual-data.csv&quot;)) %&gt;%
   clean_names() # import</code></pre>
 <div id="mturk-1" class="section level2">
 <h2>MTurk</h2>
+<p>Bind dfs of diff HITs.</p>
 <pre class="r"><code>dfm &lt;- rbind(dfm_con1, dfm_con2, dfm_lib1, dfm_lib2) # bind mturk data into 1 df</code></pre>
+<p>Identify, inspect, and exclude duplicate responses and unapproved responses.</p>
 <pre class="r"><code>dfm_dup &lt;- dfm %&gt;% 
   group_by(id) %&gt;% 
   filter(n() &gt; 1) # identify duplicates
@@ -390,32 +406,67 @@ dfm_nodup &lt;- dfm %&gt;%
   filter(!id %in% dup_id)</code></pre>
 <pre class="r"><code>dfm_app &lt;- dfm_nodup %&gt;% 
   filter(approval_status == &quot;Approved&quot;) # identify approved</code></pre>
+<p>Create “key” df matching participant data w/ “batch” info.</p>
 <pre class="r"><code>dfm_batch &lt;- dfm_app %&gt;% 
   select(id, batch)</code></pre>
 <div id="save-dfs-2" class="section level3">
 <h3>Save dfs</h3>
-<pre class="r"><code>write.csv(dfm_app, &quot;./prepped-data/sep-dfs/s1-mturk-app-data.csv&quot;)
-write.csv(dfm_batch, &quot;./prepped-data/sep-dfs/s1-mturk-batch-data.csv&quot;)</code></pre>
+<p>Save MTurk df accounting for exclusions and batch “key” df.</p>
+<pre class="r"><code>write.csv(dfm_app, &quot;./prepped-data/sep-dfs/s1-mturk-app-data0815.csv&quot;)
+write.csv(dfm_batch, &quot;./prepped-data/sep-dfs/s1-mturk-batch-data0815.csv&quot;)</code></pre>
 </div>
 </div>
 <div id="qualtrics-1" class="section level2">
 <h2>Qualtrics</h2>
+<p>Identify and inspect duplicates.</p>
+<p>Identify responses that are outliers in duration.</p>
+<pre class="r"><code>dfq &lt;- dfq %&gt;% 
+  mutate(duration = as.numeric(duration_in_seconds),
+         duration_z = scale(duration),
+         duration_ex = case_when(
+           duration_z &gt;= 3 ~ &quot;1&quot;, # z score duration times to exclude outliers
+           duration_z &lt;= -3 ~ &quot;1&quot;,
+           TRUE ~ &quot;0&quot;
+         ))</code></pre>
+<pre><code>## Warning in mask$eval_all_mutate(quo): NAs introduced by coercion</code></pre>
+<pre class="r"><code># dfq1 %&gt;%
+#   group_by(duration_ex) %&gt;% 
+#   select(duration_in_seconds) %&gt;% 
+#   summarise(n = n())</code></pre>
 <p>Excluding:</p>
 <ul>
 <li>Duplicates</li>
 <li>Unfinished</li>
 <li>Reported cheating</li>
 <li>Reported bad response</li>
-<li>Unapproved</li>
 <li>Did not consent</li>
+<li>Unapproved</li>
+<li><strong>Outliers</strong>
+<ul>
+<li><strong>Duration (1)</strong></li>
+</ul></li>
 </ul>
 <pre class="r"><code>dfq1 &lt;- dfq %&gt;% 
-  filter(!id %in% dup_id &amp; finished == 1 &amp; cheat == 3 &amp; bad_resp == 1 &amp;
-           consent1 == 1 &amp; id %in% dfm_app$id) # exlude duplicates and 
-# Ss who reported cheating or responding randomly/while distracted, select
-# only finished and approved HITs
+  filter(!id %in% dup_id) # exclude duplicates
 
-# nEED TO CREATE A MISSINGNESS VARIABLE TO FILTER W -- MORE THAN 5%****</code></pre>
+dfq1 &lt;- dfq1 %&gt;% 
+  filter(finished == 1) # exclude unfinished
+
+dfq1 &lt;- dfq1 %&gt;% 
+  filter(cheat == 3) # exclude reported cheating
+
+dfq1 &lt;- dfq1 %&gt;% 
+  filter(bad_resp == 1) # exclude reported bad responding
+
+dfq1 &lt;- dfq1 %&gt;% 
+  filter(consent1 == 1) # exclude no consent
+
+dfq1 &lt;- dfq1 %&gt;% 
+  filter(id %in% dfm_app$id) # exclude unapproved
+
+dfq1 &lt;- dfq1 %&gt;% 
+  filter(duration_ex == 0) # exclude duration outliers</code></pre>
+<p>Alter column names to avoid confusion between baseline and study variables.</p>
 <pre class="r"><code>cols &lt;- dfq1 %&gt;% 
   colnames()
 
@@ -431,33 +482,38 @@ colnames(dfq1) &lt;- cols1
 
 dfq1 &lt;- dfq1 %&gt;% 
   rename(., id = id_sc)</code></pre>
-<pre class="r"><code>dfq2 &lt;- inner_join(dfq1, dfm_batch, by = &quot;id&quot;, all = F)
-
-# dfq2 %&gt;% 
-#   select(batch)</code></pre>
+<p>Join study Qualtrics data with “batch” information.</p>
+<pre class="r"><code>dfq2 &lt;- inner_join(dfq1, dfm_batch, by = &quot;id&quot;, all = F)</code></pre>
+<p>Take a look at the resulting df.</p>
 <div id="save-dfs-3" class="section level3">
 <h3>Save dfs</h3>
-<pre class="r"><code>write.csv(dfq2, &quot;./prepped-data/sep-dfs/s1-qual-data.csv&quot;)
-write.csv(dfq_b1, &quot;./prepped-data/sep-dfs/b-qual-data.csv&quot;)</code></pre>
+<p>Save cleaned (exclusions applied) Qualtrics study df.</p>
+<pre class="r"><code>write.csv(dfq2, &quot;./prepped-data/sep-dfs/s1-qual-data0815-exdur.csv&quot;)</code></pre>
 </div>
 </div>
 </div>
 <div id="join-df1" class="section level1">
 <h1>Join (df1)</h1>
-<pre class="r"><code>dfj &lt;- inner_join(dfq2, dfq_b1, by = &quot;id&quot;, all = F) # join baseline and study 1 q data</code></pre>
+<p>Join baseline and study Qualtrics dfs (thus excluding any Ss not in both dfs).</p>
 <p>Excluding:</p>
 <ul>
 <li>Duplicates</li>
 <li>Unfinished</li>
 <li>Reported cheating</li>
 <li>Reported bad response</li>
-<li>Unapproved</li>
 <li>Did not consent</li>
+<li>Unapproved</li>
 <li><strong>Was not in both dfs (b and s1)</strong></li>
+<li>Outliers
+<ul>
+<li>Duration (1)</li>
+</ul></li>
 </ul>
+<pre class="r"><code>dfj &lt;- inner_join(dfq2, dfq_b1, by = &quot;id&quot;, all = F) # join baseline and study 1 q data</code></pre>
 <div id="save-dfs-4" class="section level2">
 <h2>Save dfs</h2>
-<pre class="r"><code>write.csv(dfj, &quot;./prepped-data/joined-data.csv&quot;)</code></pre>
+<p>Save final, joined df.</p>
+<pre class="r"><code>write.csv(dfj, &quot;./prepped-data/joined-data0815.csv&quot;)</code></pre>
 </div>
 </div>
 
