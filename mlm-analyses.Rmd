@@ -94,13 +94,14 @@ anova(int_model2, model3)
 
 ```{r}
 #"broom.mixed" package does this so you don't have to do it by hand (like below)
-int_model %>% 
-  VarCorr() %>% # get random effects (Var corr matrix)
-  as_tibble() %>% # turn into a tibble
-  select(grp, vcov) %>% # select the grp (label) and vcov (variance)
-  spread(grp, vcov) %>% # spread them out into columns
-  transmute(icc = schoolid / (schoolid + Residual)) %>% # calculate ICC
-  as.numeric()
+
+# int_model %>% 
+#   VarCorr() %>% # get random effects (Var corr matrix)
+#   as_tibble() %>% # turn into a tibble
+#   select(grp, vcov) %>% # select the grp (label) and vcov (variance)
+#   spread(grp, vcov) %>% # spread them out into columns
+#   transmute(icc = schoolid / (schoolid + Residual)) %>% # calculate ICC
+#   as.numeric()
 
 icc # this doesn't do sig testing bc this is currently under debate
 ```
