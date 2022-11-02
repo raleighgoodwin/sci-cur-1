@@ -96,15 +96,15 @@ N$_{total}$ = `r n_total`: N$_{con}$ = `r n_by_con[3,2]`, N$_{lib}$ = `r n_by_co
 scrpm_tab <- dfd1_lc %>% 
   mutate(RPM = rav_scored,
          SciCuriosity = sc_scored,
-         ArcticIce = arctic20,
-         GlobalTemp = temp20,
-         OzoneHole = ozone20,
-         AirQuality = airqual20,
-         CO2 = co220,
-         IceSheets = icesheets20,
-         BacteriaPop = diatho20,
-         EarthquakeMag = quake20) %>% 
-  select(SciCuriosity, RPM, ArcticIce, GlobalTemp, OzoneHole, AirQuality, IceSheets, BacteriaPop, EarthquakeMag) %>% 
+         ConArctic = arctic20,
+         ConTemp = temp20,
+         LibOzone = ozone20,
+         LibAir = airqual20,
+         ConFillCO2 = co220,
+         ConFillIce = icesheets20,
+         FillBacteria = diatho20,
+         FillQuake = quake20) %>% 
+  select(SciCuriosity, RPM, ConArctic, ConTemp, LibOzone, LibAir, ConFillIce, FillBacteria, FillQuake) %>% 
   psych::describe() %>% 
   mutate(Min = min,
          Max = max,
@@ -134,19 +134,19 @@ anova(sc_1, scrpm)
 ```
 
 ```{r cor-map, echo=F}
-dfp_corr <- dfd1_lc %>% 
+dfp_corr2 <- dfd1_lc %>% 
   select(conservatism_f, sc_scored, rav_scored, arctic20, temp20, ozone20, airqual20, co220, icesheets20, diatho20, quake20) %>% 
   mutate(Con = conservatism_f,
          SciCur = sc_scored,
          RPM = rav_scored,
-         Arctic = arctic20,
-         Temp = temp20,
+         ConArctic = arctic20,
+         ConTemp = temp20,
          Ozone = ozone20,
          AirQual = airqual20,
-         CO2 = co220,
-         IceSheets = icesheets20,
-         Bacteria = diatho20,
-         Quake = quake20) %>% 
+         ConFillCO2 = co220,
+         ConFillIce = icesheets20,
+         FillBacteria = diatho20,
+         FillQuake = quake20) %>% 
   select(-contains("20"), -contains("scored"), -contains("_f"))
 
 get_upper_tri <- function(cormat){
@@ -154,7 +154,7 @@ get_upper_tri <- function(cormat){
     return(cormat)
   }
 
-cor(dfp_corr) %>% 
+cor(dfp_corr2) %>% 
   get_upper_tri() %>% 
   melt() %>% 
   ggplot(aes(x = Var1, y = Var2, fill = value)) +
@@ -183,19 +183,19 @@ cor(dfp_corr) %>%
 desc_mr_var_names <- dfd1_lc %>% 
   mutate(RPM = rav_scored,
          SciCuriosity = sc_scored,
-         ArcticIce = arctic20,
-         GlobalTemp = temp20,
-         OzoneHole = ozone20,
-         AirQuality = airqual20,
-         CO2 = co220,
-         IceSheets = icesheets20,
-         Bacteria = diatho20,
-         Earthquakes = quake20,
+         ConArctic = arctic20,
+         ConTemp = temp20,
+         LibOzone = ozone20,
+         LibAir = airqual20,
+         ConFillCO2 = co220,
+         ConFillIce = icesheets20,
+         FillBacteria = diatho20,
+         FillQuake = quake20,
          Con = con)
 
 desc_mr_con <- desc_mr_var_names %>% 
   filter(Con == 1) %>% 
-  select(SciCuriosity, RPM, ArcticIce, GlobalTemp, OzoneHole, AirQuality, IceSheets, Bacteria, Earthquakes) %>%
+  select(SciCuriosity, RPM, ConArctic, ConTemp, LibOzone, LibAir, ConFillIce, FillBacteria, FillQuake) %>%
   psych::describe()%>% 
   mutate(C_Min = min,
          C_Max = max,
@@ -208,7 +208,7 @@ desc_mr_con <- desc_mr_var_names %>%
 
 desc_mr_lib <- desc_mr_var_names %>% 
   filter(Con == -1) %>% 
-  select(SciCuriosity, RPM, ArcticIce, GlobalTemp, OzoneHole, AirQuality, IceSheets, Bacteria, Earthquakes) %>%
+  select(SciCuriosity, RPM, ConArctic, ConTemp, LibOzone, LibAir, ConFillIce, FillBacteria, FillQuake) %>%
   psych::describe()%>% 
   mutate(L_Min = min,
          L_Max = max,
@@ -231,7 +231,7 @@ desc_mr <- cbind(desc_mr_con, desc_mr_lib) %>%
 
 ```{r prep-for-plot, echo=F}
 desc_long <- desc_mr_var_names %>% 
-  pivot_longer(cols = c(SciCuriosity, RPM, ArcticIce, GlobalTemp, OzoneHole, AirQuality, IceSheets, Bacteria, Earthquakes), names_to = "Variable", values_to = "Score")
+  pivot_longer(cols = c(SciCuriosity, RPM, ConArctic, ConTemp, LibOzone, LibAir, ConFillIce, FillBacteria, FillQuake), names_to = "Variable", values_to = "Score")
 
 desc_long_mr <- desc_long %>% 
   filter(Variable != "SciCuriosity" & Variable != "RPM") 
