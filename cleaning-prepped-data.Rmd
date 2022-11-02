@@ -7,6 +7,7 @@ output:
     toc: true
     toc_depth: 4
     toc_float:
+      collapsed: false
 ---
 
 # Libraries
@@ -59,7 +60,7 @@ df2 <- df1 %>%
          contains("1_1_sc"), contains("time_page_submit_sc"), 
          contains("rav"), contains("cc_risk"), contains("ccr"),
          contains("dem"), contains("start_date"), contains("end_date"), 
-         contains("finished"), contains("consent"), contains("open"), contains("fl_")
+         contains("finished"), contains("consent"), contains("open"), contains("fl_"), contains("nfc"), contains("aot"), contains("verb_log")
          )
 ```
 
@@ -430,6 +431,189 @@ df7 <- df6 %>%
          )
 ```
 
+```{r recode-mr-x}
+df7 <- df7 %>% 
+  mutate(arctic10 = dplyr::recode(arctic1_1_sc, `1` = -3,
+                           `2` = -2,
+                           `3` = -1,
+                           `4` = 0,
+                           `5` = 1,
+                           `6` = 2,
+                           `7` = 3),
+         arctic10_z = scale(arctic10),
+         temp10 = dplyr::recode(temp1_1_sc,`1` = 3,
+                           `2` = 2,
+                           `3` = 1,
+                           `4` = 0,
+                           `5` = -1,
+                           `6` = -2,
+                           `7` = -3),
+         temp10_z = scale(temp10),
+         ozone10 = dplyr::recode(ozone1_1_sc, `1` = -3,
+                           `2` = -2,
+                           `3` = -1,
+                           `4` = 0,   
+                           `5` = 1,
+                           `6` = 2,
+                           `7` = 3),
+         ozone10_z = scale(ozone10),
+         airqual10 = dplyr::recode(air_qual1_1_sc, `1` = -3,
+                           `2` = -2,
+                           `3` = -1,
+                           `4` = 0,
+                           `5` = 1,
+                           `6` = 2,
+                           `7` = 3),
+         airqual10_z = scale(airqual10),
+         diatho10 = dplyr::recode(dia_tho1_1_sc, `1` = -3,
+                           `2` = -2,
+                           `3` = -1,
+                           `4` = 0,
+                           `5` = 1,
+                           `6` = 2,
+                           `7` = 3),
+         diatho10_z = scale(diatho10),
+         co210 = dplyr::recode(co21_1_sc, `1` = 3,
+                           `2` = 2,
+                           `3` = 1,
+                           `4` = 0,
+                           `5` = -1,
+                           `6` = -2,
+                           `7` = -3),
+         co210_z = scale(co210),
+         icesheets10 = dplyr::recode(ice_sheets1_1_sc, `1` = -3,
+                           `2` = -2,
+                           `3` = -1,
+                           `4` = 0,
+                           `5` = 1,
+                           `6` = 2,
+                           `7` = 3),
+         icesheets10_z = scale(icesheets10),
+         quake10 = if_else(quake1_1_sc == 4, 0, 1)
+         )
+```
+
+## Recode (global 1 to local 7)
+```{r}
+df7 <- df7 %>% 
+  mutate(arctic20_ch = dplyr::recode(arctic2_1_sc, `1` = 1,
+                           `2` = 2,
+                           `3` = 3,
+                           `4` = 4,
+                           `5` = 5,
+                           `6` = 6,
+                           `7` = 7),
+         arctic20_chz = scale(arctic20_ch),
+         temp20_ch = dplyr::recode(temp2_1_sc,`1` = 7,
+                           `2` = 6,
+                           `3` = 5,
+                           `4` = 4,
+                           `5` = 3,
+                           `6` = 2,
+                           `7` = 1),
+         temp20_chz = scale(temp20_ch),
+         ozone20_ch = dplyr::recode(ozone2_1_sc, `1` = 1,
+                           `2` = 2,
+                           `3` = 3,
+                           `4` = 4,   
+                           `5` = 5,
+                           `6` = 6,
+                           `7` = 7),
+         ozone20_chz = scale(ozone20_ch),
+         airqual20_ch = dplyr::recode(air_qual2_1_sc, `1` = 1,
+                           `2` = 2,
+                           `3` = 3,
+                           `4` = 4,
+                           `5` = 5,
+                           `6` = 6,
+                           `7` = 7),
+         airqual20_chz = scale(airqual20_ch),
+         diatho20_ch = dplyr::recode(dia_tho2_1_sc, `1` = 1,
+                           `2` = 2,
+                           `3` = 3,
+                           `4` = 4,
+                           `5` = 5,
+                           `6` = 6,
+                           `7` = 7),
+         diatho20_chz = scale(diatho20_ch),
+         co220_ch = dplyr::recode(co22_1_sc, `1` = 7,
+                           `2` = 6,
+                           `3` = 5,
+                           `4` = 4,
+                           `5` = 3,
+                           `6` = 2,
+                           `7` = 1),
+         co220_chz = scale(co220_ch),
+         icesheets20_ch = dplyr::recode(ice_sheets2_1_sc, `1` = 1,
+                           `2` = 2,
+                           `3` = 3,
+                           `4` = 4,
+                           `5` = 5,
+                           `6` = 6,
+                           `7` = 7),
+         icesheets20_chz = scale(icesheets20_ch))
+```
+
+```{r}
+df7 <- df7 %>% 
+  mutate(arctic10_ch = dplyr::recode(arctic1_1_sc, `1` = 1,
+                           `2` = 2,
+                           `3` = 3,
+                           `4` = 4,
+                           `5` = 5,
+                           `6` = 6,
+                           `7` = 7),
+         arctic10_chz = scale(arctic10_ch),
+         temp10_ch = dplyr::recode(temp1_1_sc,`1` = 7,
+                           `2` = 6,
+                           `3` = 5,
+                           `4` = 4,
+                           `5` = 3,
+                           `6` = 2,
+                           `7` = 1),
+         temp10_chz = scale(temp10_ch),
+         ozone10_ch = dplyr::recode(ozone1_1_sc, `1` = 1,
+                           `2` = 2,
+                           `3` = 3,
+                           `4` = 4,   
+                           `5` = 5,
+                           `6` = 6,
+                           `7` = 7),
+         ozone10_chz = scale(ozone10_ch),
+         airqual10_ch = dplyr::recode(air_qual1_1_sc, `1` = 1,
+                           `2` = 2,
+                           `3` = 3,
+                           `4` = 4,
+                           `5` = 5,
+                           `6` = 6,
+                           `7` = 7),
+         airqual10_chz = scale(airqual10_ch),
+         diatho10_ch = dplyr::recode(dia_tho1_1_sc, `1` = 1,
+                           `2` = 2,
+                           `3` = 3,
+                           `4` = 4,
+                           `5` = 5,
+                           `6` = 6,
+                           `7` = 7),
+         diatho10_chz = scale(diatho10_ch),
+         co210_ch = dplyr::recode(co21_1_sc, `1` = 7,
+                           `2` = 6,
+                           `3` = 5,
+                           `4` = 4,
+                           `5` = 3,
+                           `6` = 2,
+                           `7` = 1),
+         co210_chz = scale(co210_ch),
+         icesheets10_ch = dplyr::recode(ice_sheets1_1_sc, `1` = 1,
+                           `2` = 2,
+                           `3` = 3,
+                           `4` = 4,
+                           `5` = 5,
+                           `6` = 6,
+                           `7` = 7),
+         icesheets10_chz = scale(icesheets10_ch))
+```
+
 ## Recode (eb: 0 to 3)
 
 Recode but with no negative numbers (-3 thru 0 = 0; 1+ = 1 thru 3).
@@ -740,3 +924,144 @@ Now excluding (df7attn):
   + Science Curiosity (0)
   + Raven's Progressive Matrices (2)
 * **Attention check failure (381)**
+
+**October 2022**
+
+# Exploratory Variables
+
+Including...
+
+* AOT
+* NFC
+* VA
+* ONS
+* CC risk
+* 10 year predictions
+* Slopes of 10 to 20 year predictions
+* Change score between local and non-local plot performance
+  * Arctic vs. Ice Sheets
+  * Temp vs. CO2
+
+## Change scores (df8)
+```{r ch-score}
+df8 <- df7 %>% 
+  mutate(ArcIce_2 = arctic20_ch - icesheets20_ch,
+         TempCO2_2 = temp20_ch - co220_ch)
+```
+
+## AOT
+```{r aot-recode}
+df8 <- df8 %>% 
+  mutate(aot1s = aot1_b,
+         aot2s = aot2_b,
+         aot4s = dplyr::recode(aot4_b, `1` = 7,
+                           `2` = 6,
+                           `3` = 5,
+                           `4` = 4,
+                           `5` = 3,
+                           `6` = 2,
+                           `7` = 1),
+         aot5s = dplyr::recode(aot5_b, `1` = 7,
+                           `2` = 6,
+                           `3` = 5,
+                           `4` = 4,
+                           `5` = 3,
+                           `6` = 2,
+                           `7` = 1),
+         aot6s = dplyr::recode(aot6_b, `1` = 7,
+                           `2` = 6,
+                           `3` = 5,
+                           `4` = 4,
+                           `5` = 3,
+                           `6` = 2,
+                           `7` = 1),
+         aot7s = dplyr::recode(aot7_b, `1` = 7,
+                           `2` = 6,
+                           `3` = 5,
+                           `4` = 4,
+                           `5` = 3,
+                           `6` = 2,
+                           `7` = 1))
+```
+
+```{r aot-score}
+df8 <- df8 %>% 
+  mutate(aot_scored = aot1s + aot2s + aot4s + aot5s + aot6s + aot7s,
+         aot_zscored = scale(aot_scored))
+```
+
+## NFC
+```{r nfc-recode}
+df8 <- df8 %>% 
+  mutate(nfc1s = dplyr::recode(nfc1_b, `11` = 1,
+                           `12` = 2,
+                           `13` = 3,
+                           `14` = 4,
+                           `15` = 5),
+         nfc2s = dplyr::recode(nfc2_b, `11` = 1,
+                           `12` = 2,
+                           `13` = 3,
+                           `14` = 4,
+                           `15` = 5),
+         nfc3s = dplyr::recode(nfc3_b, `11` = 5,
+                           `12` = 4,
+                           `13` = 3,
+                           `14` = 2,
+                           `15` = 1),
+         nfc4s = dplyr::recode(nfc4_b, `11` = 5,
+                           `12` = 4,
+                           `13` = 3,
+                           `14` = 2,
+                           `15` = 1),
+         nfc5s = dplyr::recode(nfc5_b, `11` = 1,
+                           `12` = 2,
+                           `13` = 3,
+                           `14` = 4,
+                           `15` = 5),
+         nfc6s = dplyr::recode(nfc6_b, `11` = 1,
+                           `12` = 2,
+                           `13` = 3,
+                           `14` = 4,
+                           `15` = 5)
+         )
+```
+
+```{r nfc-score}
+df8 <- df8 %>% 
+  mutate(nfc_scored = nfc1s + nfc2s + nfc3s + nfc4s + nfc5s + nfc6s,
+         nfc_zscored = scale(nfc_scored))
+```
+
+## VL
+```{r vl-recode}
+df8 <- df8 %>% 
+  mutate(vl1s = dplyr::recode(verb_log1_b, `1` = 0,
+                           `2` = 1,
+                           `3` = 0,
+                           `4` = 0),
+         vl2s = dplyr::recode(verb_log2_b, `1` = 0,
+                           `2` = 0,
+                           `3` = 1,
+                           `4` = 0),
+         vl3s = dplyr::recode(verb_log3_b, `1` = 1,
+                           `2` = 0,
+                           `3` = 0,
+                           `4` = 0),
+         vl4s = dplyr::recode(verb_log4_b, `1` = 0,
+                           `2` = 1,
+                           `3` = 0,
+                           `4` = 0)
+         )
+```
+
+```{r vl-code}
+df8 <- df8 %>% 
+  mutate(vl_scored = vl1s + vl2s + vl3s + vl4s,
+         vl_zscored = scale(vl_scored))
+```
+
+### Save df8
+```{r save-df8}
+write.csv(df8, "./analysis-data/cleaned-data1031.csv")
+```
+
