@@ -1,0 +1,756 @@
+---
+title: "11-1-22 lab meet pres prep"
+output:
+  html_document:
+    theme: cosmo
+    toc: true
+    toc_depth: 3
+    toc_float:
+      collapsed: false
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r mess-warn, include=FALSE}
+knitr::opts_chunk$set(message=F, warning=F)
+```
+
+# lib
+```{r load-libs, echo=F}
+library(rio)
+library(here)
+library(janitor)
+library(reshape2)
+
+library(tidyverse)
+library(ggplot2)
+library(lme4)
+
+library(knitr)
+library(Hmisc)
+library(viridis)
+library(kableExtra)
+```
+
+# data
+```{r load-data}
+dfch0 <- import(here("analysis-data", "cleaned-data1031.csv"))
+
+dfch1 <- dfch0 %>% 
+  filter(conservatism_f != 4 | con != 0)
+```
+
+```{r ex-outlier-dfs}
+dfch2 <- dfch1 %>% 
+  filter(aot_zscored > -3)
+
+dfch3 <- dfch1 %>% 
+  filter(aot_zscored > -2)
+
+dfch4 <- dfch1 %>% 
+  filter(aot_zscored > -3 & vl_zscored > -3 & nfc_zscored > -3 & 
+           sc_scoredz > -3 & sc_scoredz < 3)
+```
+
+# desc
+```{r ch-vars-tabs}
+desc_ch_c <- dfch2 %>% 
+  filter(con == 1) %>% 
+  select(ArcIce_2, TempCO2_2) %>%
+  psych::describe()%>% 
+  mutate(C_Min = min,
+         C_Max = max,
+         M_c = round(mean, 2),
+         SD_c = round(sd, 2),
+         C_Median = median,
+         Skew_c = round(skew, 2)) %>% 
+  as.data.frame() %>% 
+  select(M_c, SD_c, Skew_c)
+
+desc_ch_l <- dfch2 %>% 
+  filter(con == -1) %>% 
+  select(ArcIce_2, TempCO2_2) %>%
+  psych::describe()%>% 
+  mutate(L_Min = min,
+         L_Max = max,
+         M_l = round(mean, 2),
+         SD_l = round(sd, 2),
+         L_Median = median,
+         Skew_l = round(skew, 2)) %>% 
+  as.data.frame() %>% 
+  select(M_l, SD_l, Skew_l)
+
+desc_ch_j <- cbind(desc_ch_c, desc_ch_l) %>% 
+  select(contains("_c"), contains("_l")) %>% 
+  kable() %>% 
+  add_header_above(c(" " = 1, "Conservative" = 3, "Liberal" = 3))
+```
+
+```{r ch-mods}
+ch_mod <- lm(data = dfch2, formula = ArcIce_2 ~ con + rav_scoredz)
+
+ch_mod <- lm(data = dfch2, formula = temp20_ch ~ con + rav_scoredz + 
+               sc_scoredz + diatho20_ch)
+
+summary(ch_mod)
+
+```
+
+```{r corr-tab-try}
+# dfch2 %>% 
+#   select(contains("20_ch"), con, rav_scoredz, sc_scoredz,
+#          aot_zscored, nfc_zscored, vl_zscored) %>% 
+#   cor() %>% 
+#   kable()
+```
+
+```{r look-mods}
+look1 <- lm(data = dfch2, formula = arctic20_ch ~ con + rav_scoredz + sc_scoredz + aot_zscored + nfc_zscored)
+summary(look1)
+
+look2 <- lm(data = dfch2, formula = arctic20_ch ~ con * aot_zscored)
+summary(look2)
+
+look23 <- lm(data = dfch3, formula = arctic20_ch ~ con * aot_zscored)
+summary(look23)
+
+look3 <- lm(data = dfch2, formula = arctic20_ch ~ rav_scoredz + con * aot_zscored)
+summary(look3)
+
+look4 <- lm(data = dfch2, formula = arctic20_ch ~ vl_zscored + con * aot_zscored)
+summary(look4)
+
+look5 <- lm(data = dfch2, formula = arctic20_ch ~ nfc_zscored 
+            + con * aot_zscored) # 3 way int is a no go tho, w none of nfc int sig but me is
+summary(look5)
+
+look6 <- lm(data = dfch2, formula = arctic20_ch ~ sc_scoredz 
+            + con * aot_zscored) 
+summary(look6)
+
+look7 <- lm(data = dfch2, formula = arctic20_ch ~ sc_scoredz + nfc_zscored 
+            + con * aot_zscored) 
+summary(look7)
+
+look8 <- lm(data = dfch2, formula = sc_scoredz ~ con + aot_zscored + rav_scoredz)
+summary(look8)
+
+look9 <- lm(data = dfch2, formula = sc_scoredz ~ con)
+summary(look9)
+
+look10 <- lm(data = dfch2, formula = sc_scoredz ~ con + aot_zscored)
+summary(look10)
+
+look11 <- lm(data = dfch2, formula = sc_scoredz ~ aot_zscored)
+summary(look11)
+```
+
+```{r look-mods-df4}
+
+look1 <- lm(data = dfch4, formula = arctic20_ch ~ conservatism + rav_scoredz + sc_scoredz + aot_zscored + nfc_zscored)
+summary(look1)
+
+look2 <- lm(data = dfch4, formula = arctic20_ch ~ conservatism * aot_zscored)
+summary(look2)
+
+look3 <- lm(data = dfch4, formula = arctic20_ch ~ rav_scoredz + conservatism * aot_zscored)
+summary(look3)
+
+look4 <- lm(data = dfch4, formula = arctic20_ch ~ vl_zscored + conservatism * aot_zscored)
+summary(look4)
+
+look5 <- lm(data = dfch4, formula = arctic20_ch ~ nfc_zscored 
+            + conservatism * aot_zscored) # 3 way int is a no go tho, w none of 
+# nfc int sig but me is
+summary(look5)
+
+look6 <- lm(data = dfch4, formula = arctic20_ch ~ sc_scoredz 
+            + conservatism * aot_zscored) 
+summary(look6)
+
+look7 <- lm(data = dfch4, formula = arctic20_ch ~ sc_scoredz + nfc_zscored 
+            + conservatism * aot_zscored) 
+summary(look7)
+
+look8 <- lm(data = dfch4, formula = sc_scoredz ~ conservatism + aot_zscored + rav_scoredz)
+summary(look8)
+
+look9 <- lm(data = dfch4, formula = sc_scoredz ~ conservatism)
+summary(look9)
+
+look10 <- lm(data = dfch4, formula = sc_scoredz ~ conservatism + aot_zscored)
+summary(look10)
+
+look11 <- lm(data = dfch4, formula = sc_scoredz ~ aot_zscored)
+summary(look11)
+
+look12 <- lm(data = dfch4, formula = sc_scoredz ~ vl_zscored + rav_scoredz + nfc_zscored)
+summary(look12)
+
+look13 <- lm(data = dfch4, formula = sc_scoredz ~ rav_scoredz +
+               conservatism + nfc_zscored + aot_zscored + vl_zscored)
+summary(look13)
+```
+
+
+
+```{r aot-sc-plot}
+dfch2 %>% 
+  ggplot(aes(x = aot_zscored, y = sc_scoredz, fill = as.factor(con))) +
+  geom_smooth()
+
+dfch2 %>% 
+  ggplot(aes(x = aot_zscored, y = sc_scoredz)) +
+  geom_smooth()
+
+dfch2 %>% 
+  ggplot(aes(x = con, y = sc_scoredz)) +
+  geom_smooth()
+```
+
+```{r turtle-mods}
+turtle1 <- lm(data = dfch3, formula = arctic10_ch ~ rav_scoredz + con + sc_scoredz)
+summary(turtle1)
+
+turtle2 <- lm(data = dfch3, formula = arctic20_ch ~ rav_scoredz + con + sc_scoredz)
+summary(turtle2)
+```
+
+```{r rough-plots}
+dfch3 %>% 
+  ggplot(aes(x = aot_zscored, y = arctic20_ch, fill = as.factor(con))) +
+  geom_smooth()
+
+dfch2 %>% 
+  ggplot(aes(x = con, y = arctic20_ch)) +
+  geom_bar(fun = "mean", stat = "summary")
+
+dfch2 %>% 
+  filter(con == -1) %>% 
+  select(aot_zscored) %>% 
+  hist()
+
+dfch2 %>% 
+  filter(con == 1) %>% 
+  select(aot_zscored) %>% 
+  hist()
+
+dfch2 %>% 
+  ggplot(aes(x = conservatism, y = aot_zscored)) +
+  geom_bar(fun = "mean", stat = "summary")
+
+dfch2 %>% 
+  ggplot(aes(x = conservatism, y = sc_scoredz)) +
+  geom_bar(fun = "mean", stat = "summary")
+
+dfch2 %>% 
+  ggplot(aes(x = conservatism)) +
+  geom_bar()
+
+dfch2 %>% 
+  ggplot(aes(x = sc_scoredz)) +
+  geom_bar()
+
+dfch2 %>% 
+  ggplot(aes(x = aot_zscored)) +
+  geom_bar()
+
+dfch2 %>% 
+  ggplot(aes(x = nfc_zscored)) +
+  geom_bar()
+
+dfch2 %>% 
+  ggplot(aes(x = vl_zscored)) +
+  geom_bar()
+```
+
+```{r descplot-dfs}
+# aot
+descplot_aot <- dfch4 %>% 
+  # select(conservatism, conservatism_f, aot_zscored, nfc_zscored, rav_scoredz,
+  #        sc_scoredz, vl_zscored, arctic20_ch, temp20_ch, arctic10_ch, 
+  #        temp10_ch) %>% 
+  mutate(conservatism = as.factor(conservatism),
+         aot_zscored = as.numeric(aot_zscored)) %>% 
+  select(aot_zscored, conservatism)%>% 
+  group_by(conservatism) %>%
+  dplyr::summarise(n = n(),
+            Mean = mean(aot_zscored, na.rm=T),
+            sd = sd(aot_zscored, na.rm=T),
+            se = sd/(sqrt(n)),
+            var = "5. Actively Open-Minded Thinking",
+            min = min(aot_zscored),
+            max = max(aot_zscored))
+
+descplot_aot  %>% 
+  ggplot(aes(x = conservatism, y = Mean)) +
+  geom_bar(stat = "identity") +
+  geom_errorbar(aes(ymin=Mean-se, ymax=Mean+se))
+
+# sc
+descplot_sc <- dfch4 %>% 
+  # select(conservatism, conservatism_f, aot_zscored, nfc_zscored, rav_scoredz,
+  #        sc_scoredz, vl_zscored, arctic20_ch, temp20_ch, arctic10_ch, 
+  #        temp10_ch) %>% 
+  mutate(conservatism = as.factor(conservatism),
+         sc_scoredz = as.numeric(sc_scoredz)) %>% 
+  select(sc_scoredz, conservatism)%>% 
+  group_by(conservatism) %>%
+  dplyr::summarise(n = n(),
+            Mean = mean(sc_scoredz, na.rm=T),
+            sd = sd(sc_scoredz, na.rm=T),
+            se = sd/(sqrt(n)),
+            var = "1. Science Curiosity",
+            min = min(sc_scoredz),
+            max = max(sc_scoredz))
+
+# nfc
+descplot_nfc <- dfch4 %>% 
+  # select(conservatism, conservatism_f, aot_zscored, nfc_zscored, rav_scoredz,
+  #        sc_scoredz, vl_zscored, arctic20_ch, temp20_ch, arctic10_ch, 
+  #        temp10_ch) %>% 
+  mutate(conservatism = as.factor(conservatism),
+         nfc_zscored = as.numeric(nfc_zscored)) %>% 
+  select(nfc_zscored, conservatism)%>% 
+  group_by(conservatism) %>%
+  dplyr::summarise(n = n(),
+            Mean = mean(nfc_zscored, na.rm=T),
+            sd = sd(nfc_zscored, na.rm=T),
+            se = sd/(sqrt(n)),
+            var = "4. Need For Cognition",
+            min = min(nfc_zscored),
+            max = max(nfc_zscored))
+
+descplt_facet <- rbind(descplot_aot, descplot_sc, descplot_nfc)
+```
+
+```{r aot-nfc-sc-plot}
+descplt_facet  %>% 
+  ggplot(aes(x = conservatism, y = Mean)) +
+  geom_bar(stat = "identity", fill = "darkseagreen") +
+  geom_errorbar(aes(ymin=Mean-se, ymax=Mean+se), width = .2) +
+  facet_wrap(~var) +
+  labs(x = "Conservatism", y = "Mean (z-scored)") +
+  theme_bw()
+```
+
+
+```{r rav-vl-sc-plot}
+descplot_rav <- dfch4 %>% 
+  # select(conservatism, conservatism_f, aot_zscored, nfc_zscored, rav_scoredz,
+  #        sc_scoredz, vl_zscored, arctic20_ch, temp20_ch, arctic10_ch, 
+  #        temp10_ch) %>% 
+  mutate(conservatism = as.factor(conservatism),
+         rav_scoredz = as.numeric(rav_scoredz)) %>% 
+  select(rav_scoredz, conservatism)%>% 
+  group_by(conservatism) %>%
+  dplyr::summarise(n = n(),
+            Mean = mean(rav_scoredz, na.rm=T),
+            sd = sd(rav_scoredz, na.rm=T),
+            se = sd/(sqrt(n)),
+            var = "2. Raven's Progressive Matrices",
+            min = min(rav_scoredz),
+            max = max(rav_scoredz))
+
+descplot_vl <- dfch4 %>% 
+  # select(conservatism, conservatism_f, aot_zscored, nfc_zscored, rav_scoredz,
+  #        sc_scoredz, vl_zscored, arctic20_ch, temp20_ch, arctic10_ch, 
+  #        temp10_ch) %>% 
+  mutate(conservatism = as.factor(conservatism),
+         vl_zscored = as.numeric(vl_zscored)) %>% 
+  select(vl_zscored, conservatism)%>% 
+  group_by(conservatism) %>%
+  dplyr::summarise(n = n(),
+            Mean = mean(vl_zscored, na.rm=T),
+            sd = sd(vl_zscored, na.rm=T),
+            se = sd/(sqrt(n)),
+            var = "3. Verbal Logic",
+            min = min(vl_zscored),
+            max = max(vl_zscored))
+
+descplotca <- rbind(descplot_rav, descplot_sc, descplot_vl)
+
+```
+
+
+```{r ca-sc-plot}
+descplotca  %>% 
+  ggplot(aes(x = conservatism, y = Mean)) +
+  geom_bar(stat = "identity", fill = "darkseagreen") +
+  geom_errorbar(aes(ymin=Mean-se, ymax=Mean+se), width = .2) +
+  facet_wrap(~var) +
+  labs(x = "Conservatism", y = "Mean (z-scored)") +
+  theme_bw()
+```
+
+```{r sc-plots-combd}
+descplotall <- rbind(descplotca, descplot_aot, descplot_nfc)
+```
+
+```{r all}
+descplotall  %>% 
+  ggplot(aes(x = conservatism, y = Mean)) +
+  geom_bar(stat = "identity", fill = "darkseagreen") +
+  geom_errorbar(aes(ymin=Mean-se, ymax=Mean+se), width = .2) +
+  facet_wrap(~var, ncol=3) +
+  labs(x = "Conservatism", y = "Mean (z-scored)") +
+  theme_bw()
+
+desc5 <- descplotall  %>% 
+  ggplot(aes(x = conservatism, y = Mean)) +
+  geom_bar(stat = "identity", fill = "darkseagreen") +
+  geom_errorbar(aes(ymin=Mean-se, ymax=Mean+se), width = .2) +
+  facet_wrap(~var, ncol=3) +
+  labs(x = "Conservatism", y = "Mean (z-scored)") +
+  theme_bw()
+```
+
+# plot by sci cur
+```{r scdescplot-dfs, echo=F, eval=F}
+# aot
+scdescplot_aot <- dfch4 %>% 
+  # select(conservatism, conservatism_f, aot_zscored, nfc_zscored, rav_scoredz,
+  #        sc_scoredz, vl_zscored, arctic20_ch, temp20_ch, arctic10_ch, 
+  #        temp10_ch) %>% 
+  mutate(sc_scoredz = as.factor(sc_scoredz),
+         aot_zscored = as.numeric(aot_zscored)) %>% 
+  select(aot_zscored, sc_scoredz)%>% 
+  group_by(sc_scoredz) %>%
+  dplyr::summarise(n = n(),
+            Mean = mean(aot_zscored, na.rm=T),
+            sd = sd(aot_zscored, na.rm=T),
+            se = sd/(sqrt(n)),
+            var = "5. Actively Open-Minded Thinking",
+            min = min(aot_zscored),
+            max = max(aot_zscored))
+
+descplot_aot  %>% 
+  ggplot(aes(x = sc_scoredz, y = Mean)) +
+  geom_bar(stat = "identity") +
+  geom_errorbar(aes(ymin=Mean-se, ymax=Mean+se))
+
+# sc
+scdescplot_con <- dfch4 %>% 
+  # select(conservatism, conservatism_f, aot_zscored, nfc_zscored, rav_scoredz,
+  #        sc_scoredz, vl_zscored, arctic20_ch, temp20_ch, arctic10_ch, 
+  #        temp10_ch) %>% 
+  mutate(conservatism = as.factor(conservatism),
+         conservatism = as.numeric(conservatism)) %>% 
+  select(conservatism, sc_scoredz)%>% 
+  group_by(sc_scoredz) %>%
+  dplyr::summarise(n = n(),
+            Mean = mean(conservatism, na.rm=T),
+            sd = sd(conservatism, na.rm=T),
+            se = sd/(sqrt(n)),
+            var = "1. Conservatism",
+            min = min(conservatism),
+            max = max(conservatism))
+
+# nfc
+scdescplot_nfc <- dfch4 %>% 
+  # select(conservatism, conservatism_f, aot_zscored, nfc_zscored, rav_scoredz,
+  #        sc_scoredz, vl_zscored, arctic20_ch, temp20_ch, arctic10_ch, 
+  #        temp10_ch) %>% 
+  mutate(sc_scoredz = as.factor(sc_scoredz),
+         nfc_zscored = as.numeric(nfc_zscored)) %>% 
+  select(nfc_zscored, sc_scoredz)%>% 
+  group_by(sc_scoredz) %>%
+  dplyr::summarise(n = n(),
+            Mean = mean(nfc_zscored, na.rm=T),
+            sd = sd(nfc_zscored, na.rm=T),
+            se = sd/(sqrt(n)),
+            var = "4. Need For Cognition",
+            min = min(nfc_zscored),
+            max = max(nfc_zscored))
+
+scdescplt_facet <- rbind(scdescplot_aot, scdescplot_con, scdescplot_nfc)
+```
+
+```{r scaot-nfc-sc-plot, echo=F, eval=F}
+scdescplt_facet  %>% 
+  ggplot(aes(x = sc_scoredz, y = Mean)) +
+  geom_bar(stat = "identity", fill = "darkseagreen") +
+  geom_errorbar(aes(ymin=Mean-se, ymax=Mean+se), width = .2) +
+  facet_wrap(~var) +
+  labs(x = "sc_scoredz", y = "Mean (z-scored)") +
+  theme_bw()
+```
+
+
+```{r scrav-vl-sc-plot, echo=F, eval=F}
+scdescplot_rav <- dfch4 %>% 
+  # select(conservatism, conservatism_f, aot_zscored, nfc_zscored, rav_scoredz,
+  #        sc_scoredz, vl_zscored, arctic20_ch, temp20_ch, arctic10_ch, 
+  #        temp10_ch) %>% 
+  mutate(sc_scoredz = as.factor(sc_scoredz),
+         rav_scoredz = as.numeric(rav_scoredz)) %>% 
+  select(rav_scoredz, sc_scoredz)%>% 
+  group_by(sc_scoredz) %>%
+  dplyr::summarise(n = n(),
+            Mean = mean(rav_scoredz, na.rm=T),
+            sd = sd(rav_scoredz, na.rm=T),
+            se = sd/(sqrt(n)),
+            var = "2. Raven's Progressive Matrices",
+            min = min(rav_scoredz),
+            max = max(rav_scoredz))
+
+scdescplot_vl <- dfch4 %>% 
+  # select(conservatism, conservatism_f, aot_zscored, nfc_zscored, rav_scoredz,
+  #        sc_scoredz, vl_zscored, arctic20_ch, temp20_ch, arctic10_ch, 
+  #        temp10_ch) %>% 
+  mutate(sc_scoredz = as.factor(sc_scoredz),
+         vl_zscored = as.numeric(vl_zscored)) %>% 
+  select(vl_zscored, sc_scoredz)%>% 
+  group_by(sc_scoredz) %>%
+  dplyr::summarise(n = n(),
+            Mean = mean(vl_zscored, na.rm=T),
+            sd = sd(vl_zscored, na.rm=T),
+            se = sd/(sqrt(n)),
+            var = "3. Verbal Logic",
+            min = min(vl_zscored),
+            max = max(vl_zscored))
+
+scdescplotca <- rbind(scdescplot_rav, scdescplot_con, scdescplot_vl)
+
+```
+
+
+```{r scca-sc-plot, echo=F, eval=F}
+scdescplotca  %>% 
+  ggplot(aes(x = sc_scoredz, y = Mean)) +
+  geom_bar(stat = "identity", fill = "darkseagreen") +
+  geom_errorbar(aes(ymin=Mean-se, ymax=Mean+se), width = .2) +
+  facet_wrap(~var) +
+  labs(x = "sc_scoredz", y = "Mean (z-scored)") +
+  theme_bw()
+```
+
+```{r scsc-plots-combd, echo=F, eval=F}
+scdescplotall <- rbind(scdescplotca, scdescplot_aot, scdescplot_nfc)
+```
+
+```{r sc-all, echo=F, eval=F}
+scdescplotall  %>% 
+  ggplot(aes(x = sc_scoredz, y = Mean)) +
+  geom_bar(stat = "identity", fill = "darkseagreen") +
+  geom_errorbar(aes(ymin=Mean-se, ymax=Mean+se), width = .2) +
+  facet_wrap(~var, ncol=3) +
+  labs(x = "sc_scoredz", y = "Mean (z-scored)") +
+  theme_bw()
+
+scdesc5 <- scdescplotall  %>% 
+  ggplot(aes(x = as.numeric(sc_scoredz), y = Mean)) +
+  geom_point(stat = "identity", fill = "darkseagreen") +
+  # geom_errorbar(aes(ymin=Mean-se, ymax=Mean+se), width = .2) +
+  facet_wrap(~var, ncol=3) +
+  labs(x = "Science Curiosity (z-scored)", y = "Mean (z-scored)") +
+  scale_x_continuous(limits = c(-3, 3), breaks = seq(-3, 3, .5)) +
+  theme_bw()
+
+scdescplotall %>% 
+  mutate(sccc = as.numeric(sc_scoredz)) %>% 
+  select(sccc) %>% 
+  psych::describe()
+```
+
+
+
+```{r scsep-count-plots-df3, echo=F, eval=F}
+dfch1 %>% 
+  ggplot(aes(x = conservatism)) +
+  geom_bar(fill = "darkseagreen") +
+  labs(x = "Conservatism", y = "Count") +
+  theme_bw()
+
+dfch1 %>% 
+  ggplot(aes(x = aot_zscored)) +
+  geom_bar(fill = "darkseagreen", width = .15) +
+  labs(x = "Actively Opened-Minded Thinking (z-scored)", y = "Count") +
+  theme_bw()
+
+dfch2 %>% 
+  ggplot(aes(x = conservatism)) +
+  geom_bar(fill = "darkseagreen") +
+  labs(x = "Conservatism", y = "Count") +
+  theme_bw()
+
+dfch2 %>% 
+  ggplot(aes(x = aot_zscored)) +
+  geom_bar(fill = "darkseagreen", width = .15) +
+  labs(x = "Actively Opened-Minded Thinking (AOT; z-scored)", y = "Count") +
+  theme_bw()
+
+dfch2 %>% 
+  ggplot(aes(x = sc_scoredz)) +
+  geom_bar(fill = "darkseagreen", width = .15) +
+  labs(x = "Science Curiosity (z-scored)", y = "Count") +
+  theme_bw()
+
+dfch2 %>% 
+  ggplot(aes(x = nfc_zscored)) +
+  geom_bar(fill = "darkseagreen", width = .12) +
+  labs(x = "Need for Cognition (NFC; z-scored)", y = "Count") +
+  theme_bw()
+
+dfch2 %>% 
+  ggplot(aes(x = vl_zscored)) +
+  geom_bar(fill = "darkseagreen", width = .3) +
+  labs(x = "Verbal Logic (z-scored)", y = "Count") +
+  theme_bw()
+```
+
+```{r scsep-count-plots-df4, echo=F, eval=F}
+dfch4 %>% 
+  ggplot(aes(x = conservatism)) +
+  geom_bar(fill = "darkseagreen") +
+  labs(x = "Conservatism", y = "Count") +
+  theme_bw()
+
+dfch4 %>% 
+  ggplot(aes(x = aot_zscored)) +
+  geom_bar(fill = "darkseagreen", width = .15) +
+  labs(x = "Actively Opened-Minded Thinking (AOT; z-scored)", y = "Count") +
+  theme_bw()
+
+dfch4 %>% 
+  ggplot(aes(x = conservatism)) +
+  geom_bar(fill = "darkseagreen") +
+  labs(x = "Conservatism", y = "Count") +
+  theme_bw()
+
+dfch4 %>% 
+  ggplot(aes(x = sc_scoredz)) +
+  geom_bar(fill = "darkseagreen", width = .15) +
+  labs(x = "Science Curiosity (z-scored)", y = "Count") +
+  theme_bw()
+
+dfch4 %>% 
+  ggplot(aes(x = nfc_zscored)) +
+  geom_bar(fill = "darkseagreen", width = .12) +
+  labs(x = "Need for Cognition (NFC; z-scored)", y = "Count") +
+  theme_bw()
+
+dfch4 %>% 
+  ggplot(aes(x = vl_zscored)) +
+  geom_bar(fill = "darkseagreen", width = .3) +
+  labs(x = "Verbal Logic (z-scored)", y = "Count") +
+  theme_bw()
+```
+
+
+# mlm
+```{r mlm-df}
+dfmlm <- dfch2 %>% 
+  pivot_longer(., cols = c(arctic20_ch, arctic10_ch, temp20_ch,
+                           temp10_ch, ozone20_ch, ozone10_ch, airqual20_ch,
+                           airqual10_ch, diatho20_ch, diatho10_ch, co220_ch,
+                           co210_ch, icesheets20_ch, icesheets10_ch),
+               names_to = "item",
+               values_to = "response",
+               values_drop_na = T)
+```
+
+```{r mlm-recodes}
+dfmlm <- dfmlm %>% 
+  select(id, con, conservatism_f, item, response, sc_scored, sc_scoredz, 
+         rav_scored, rav_scoredz, aot_scored, aot_zscored, nfc_scored,
+         nfc_zscored, vl_scored, vl_zscored, contains("10_ch")) %>% 
+  mutate(item_slope = factor(case_when(
+    item == "arctic2_1_sc" | item == "ozone2_1_sc" | item == "ice_sheets2_1_sc" |
+      item == "air_qual2_1_sc" | item == "arctic1_1_sc" | 
+      item == "ozone1_1_sc" | item == "ice_sheets1_1_sc" | 
+      item == "air_qual1_1_sc" ~ "neg",
+    item == "temp2_1_sc" | item == "dia_tho2_1_sc" | item == "co22_1_sc" |
+      item == "temp1_1_sc" | item == "dia_tho1_1_sc" | 
+      item == "co21_1_sc" ~ "pos"
+    )),
+  item_ambiguous = factor(case_when(
+    item == "arctic2_1_sc" | item == "temp2_1_sc" | item == "ozone2_1_sc" | 
+      item == "air_qual2_1_sc" | item == "dia_tho2_1_sc" |
+      item == "arctic1_1_sc" | item == "temp1_1_sc" | item == "ozone1_1_sc" | 
+      item == "air_qual1_1_sc" | item == "dia_tho1_1_sc" ~ "1",
+    item == "co22_1_sc" | item == "ice_sheets2_1_sc" |
+      item == "co21_1_sc" | item == "ice_sheets1_1_sc" ~ "0" 
+  )),
+  item_ideo = factor(case_when(
+    item == "arctic2_1_sc" | item == "temp2_1_sc" | item == "co22_1_sc" | 
+      item == "ice_sheets2_1_sc" | item == "arctic1_1_sc" | 
+      item == "temp1_1_sc" | item == "co21_1_sc" | 
+      item == "ice_sheets1_1_sc"~ "con",
+    item == "ozone2_1_sc" | item == "air_qual2_1_sc" | item == "ozone1_1_sc" 
+    | item == "air_qual1_1_sc" ~ "lib",
+    item == "dia_tho2_1_sc" | item == "dia_tho1_1_sc" ~ "na" 
+  )),
+  item_political = factor(case_when(
+    item == "arctic2_1_sc" | item == "temp2_1_sc" | item == "co22_1_sc" | 
+      item == "ice_sheets2_1_sc" | item == "arctic1_1_sc" | 
+      item == "temp1_1_sc" | item == "co21_1_sc" | 
+      item == "ice_sheets1_1_sc" | item == "ozone2_1_sc" | item ==
+      "air_qual2_1_sc" | item == "ozone1_1_sc" | 
+      item == "air_qual1_1_sc" ~ "1",
+    item == "dia_tho2_1_sc" | item == "dia_tho1_1_sc" ~ "0" 
+  )),
+  item = factor(item),
+  response = as.numeric(response),
+  id = factor(id),
+  conservatism_f = as.numeric(conservatism_f),
+  sc_zscored = as.numeric(sc_scoredz),
+  rav_zscored = as.numeric(rav_scoredz),
+  aot_zscored = as.numeric(aot_zscored),
+  nfc_zscored = as.numeric(nfc_zscored),
+  vl_zscored = as.numeric(vl_zscored)
+  )
+```
+
+```{r int-mods}
+int_model1 <- lmer(response ~ 1 + (1 | item), data = dfmlm)
+
+summary(int_model1)
+
+int_model2 <- lmer(response ~ 1 + (1 | item) + (1 | id), data = dfmlm)
+
+summary(int_model2)
+
+anova(int_model1, int_model2)
+```
+
+```{r mlm-mods}
+model3 <- lmer(response ~ 1 + conservatism_f + (1 + conservatism_f | item) + 
+                 (1 + conservatism_f | id), data = dfmlm)
+
+summary(model3)
+
+anova(int_model2, model3)
+
+model4 <- lmer(response ~ 1 + conservatism_f + 
+                 (1 | item) + 
+                 (1 + conservatism_f | id), data = dfmlm)
+
+summary(model4)
+
+anova(int_model2, model4)
+
+model5 <- lmer(response ~ 1 + conservatism_f + sc_zscored + 
+                 (1 | item) + 
+                 (1 + conservatism_f + sc_zscored | id), data = dfmlm)
+
+summary(model5)
+
+anova(model4, model5)
+
+model6 <- lmer(response ~ 1 + conservatism_f + rav_zscored + 
+                 (1 | item) + 
+                 (1 + conservatism_f + rav_zscored | id), data = dfmlm)
+
+summary(model6)
+
+anova(model4, model6)
+
+model7 <- lmer(response ~ 1 + conservatism_f + rav_zscored + aot_zscored +
+                 (1 | item) + 
+                 (1 + conservatism_f + rav_zscored + aot_zscored| id), data = dfmlm)
+
+summary(model7)
+
+anova(model6, model7)
+```
