@@ -1,0 +1,41 @@
+---
+title: "Summary of Analyses"
+output:
+  html_document:
+    theme: cosmo
+    toc: true
+    toc_depth: 3
+    toc_float:
+      collapsed: false
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r mess-warn, include=FALSE}
+knitr::opts_chunk$set(message=F, warning=F)
+```
+
+# Libraries
+```{r load-libs, echo=F}
+library(rio)
+library(here)
+library(janitor)
+library(reshape2)
+
+library(tidyverse)
+library(ggplot2)
+library(lme4)
+
+library(knitr)
+library(Hmisc)
+library(viridis)
+library(kableExtra)
+```
+
+# Data
+```{r}
+
+```
+
+# List of analyses
+

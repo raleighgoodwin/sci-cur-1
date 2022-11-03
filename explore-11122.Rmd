@@ -146,7 +146,6 @@ summary(look11)
 ```
 
 ```{r look-mods-df4}
-
 look1 <- lm(data = dfch4, formula = arctic20_ch ~ conservatism + rav_scoredz + sc_scoredz + aot_zscored + nfc_zscored)
 summary(look1)
 

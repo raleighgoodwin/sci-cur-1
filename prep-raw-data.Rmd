@@ -9,6 +9,19 @@ output:
       collapsed: false
 ---
 
+In this file:
+
+* Import MTurk and Qualtrics data
+* Exclude responses that are: duplicate, unapproved via CloudResearch, unfinished, or lacking consent
+* Exclude Ss reporting an age under 18
+* Exclude Ss who reported cheating or reported that their data should not be used
+* Exclude any Ss that were not in both the baseline and study data
+* Exclude responses that are outliers in duration
+* Create a variable denoting which HIT each response came from
+* Edit variable names to show whether it is from the baseline survey or study
+* Join MTurk and Qualtrics data into a single dataframe
+* Save and export joined dataframe, as well as a dataframe of duplicate responses and approved responses from MTurk
+
 # Libraries
 
 Load necessary packages.

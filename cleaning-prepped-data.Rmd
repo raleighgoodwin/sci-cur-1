@@ -10,6 +10,10 @@ output:
       collapsed: false
 ---
 
+In this file:
+
+* 
+
 # Libraries
 ```{r load-libs, message=F, warning=F}
 library(rio)
@@ -106,7 +110,7 @@ df3 %>%
   filter(conservatism != 4 & is.na(ideology_lean2) == F) # this works
 ```
 
-Find out that HITs weren't actually sorted perfectly and ideology does not always agree with HIT batch.
+Find out that HITs weren't actually sorted perfectly and ideology does not always agree with HIT batch...
 
 ```{r rescore-batch}
 df3 <- df3 %>% 
@@ -271,11 +275,15 @@ df4 <- df4 %>% # score sci cur
 
 ## No Outliers
 
-There are no outliers on this variable.
+There are 3 outliers on this variable.
 
 ```{r id-scicur-outlier}
 df4 %>% 
   filter(sc_scoredz <= -3) %>% 
+  nrow()
+
+df4 %>% 
+  filter(sc_scoredz >= 3) %>% 
   nrow()
 ```
 
@@ -286,6 +294,10 @@ df4$sc_scored %>%
 
 df4 %>% 
   ggplot(aes(x = sc_score1)) +
+  geom_histogram()
+
+df4 %>% 
+  ggplot(aes(x = sc_scoredz)) +
   geom_histogram()
 ```
 
@@ -326,18 +338,22 @@ Now excluding:
 * Was not in both dfs (b and s1)
 * Outliers
   + Duration (1)
-  + **Science Curiosity (0)**
+  + **Science Curiosity (3)**
   + **Raven's Progressive Matrices (RPM; 2)**
 
 ```{r id-rpm-outlier}
 df5 %>% 
   filter(rav_scoredz <= -3) %>% 
   nrow()
+
+df5 %>% 
+  filter(rav_scoredz >= 3) %>% 
+  nrow()
 ```
 
-```{r ex-rpm}
+```{r ex-rpm-sc-out}
 df6 <- df5 %>% 
-  filter(rav_scoredz > -3)
+  filter(rav_scoredz > -3 & sc_scoredz < 3)
 ```
 
 ## N (df6)
@@ -367,9 +383,9 @@ Scoring plot items and MR task.
 
 ## Recode (-3 to 3)
 
-Recode for endpoint bias (-3 = least, 3 = most, 0 = no change).
+Recode for overweighting local trend ("endpoint bias") (-3 = least, 3 = most, 0 = no change).
 
-```{r recode-mr-x}
+```{r recode-mr-20}
 df7 <- df6 %>% 
   mutate(arctic20 = dplyr::recode(arctic2_1_sc, `1` = -3,
                            `2` = -2,
@@ -431,7 +447,7 @@ df7 <- df6 %>%
          )
 ```
 
-```{r recode-mr-x}
+```{r recode-mr-10}
 df7 <- df7 %>% 
   mutate(arctic10 = dplyr::recode(arctic1_1_sc, `1` = -3,
                            `2` = -2,
@@ -494,7 +510,7 @@ df7 <- df7 %>%
 ```
 
 ## Recode (global 1 to local 7)
-```{r}
+```{r local7-mr-20}
 df7 <- df7 %>% 
   mutate(arctic20_ch = dplyr::recode(arctic2_1_sc, `1` = 1,
                            `2` = 2,
@@ -554,7 +570,7 @@ df7 <- df7 %>%
          icesheets20_chz = scale(icesheets20_ch))
 ```
 
-```{r}
+```{r local7-mr-10}
 df7 <- df7 %>% 
   mutate(arctic10_ch = dplyr::recode(arctic1_1_sc, `1` = 1,
                            `2` = 2,
@@ -616,7 +632,7 @@ df7 <- df7 %>%
 
 ## Recode (eb: 0 to 3)
 
-Recode but with no negative numbers (-3 thru 0 = 0; 1+ = 1 thru 3).
+Recode but with no negative numbers (-3 thru 0 = 0; 1+ = 1 thru 3). (In retrospect this is pretty pointless but I did it so I'll leave it here.)
 
 ```{r recode-mr-eb}
 df7 <- df7 %>% 
@@ -691,7 +707,7 @@ df7 <- df7 %>%
 
 ## Recode (yn: 0 or 1)
 
-Recode dichotomous variable that demonstrates whether endpoint bias was shown (-3 thru 0 = 0, 1 thru 3 = 1).
+Recode dichotomous variable that demonstrates whether endpoint bias was shown (-3 thru 0 = 0, 1 thru 3 = 1). (Again, kind of pointless, but I'll leave it.)
 
 ```{r recode-mr-yn}
 df7 <- df7 %>% 
@@ -756,7 +772,7 @@ Index for performance on filler items (w/ eb 0-3 coding scheme) to exclude outli
 
 ```{r score-mr-ideo, include=F}
 df7 <- df7 %>% 
-  mutate(n_plot_score = diatho20_eb + co220_eb + icesheets20_eb,
+  mutate(n_plot_score = diatho20_eb + co220_eb + icesheets20_eb, # "n" as in "neutral"
          n_plot_score_z = scale(n_plot_score),
          nq_plot_score = n_plot_score + quake20_eb, # look at it w/ and w/o
          # quake item wherein the "normative" response is "no change"
@@ -765,7 +781,7 @@ df7 <- df7 %>%
 df7 <- df7 %>% 
   mutate(bad_plot_score = ifelse(n_plot_score_z >= 3, 1, 0),
          bad_plot_score_q = ifelse(nq_plot_score_z >= 3, 1, 0)
-         ) # turns out no diff btwn no q and _q so can just use no q
+         ) # turns out no diff btwn no_q and _q so can just use no_q
 
 df7 %>% 
   select(contains("plot_score")) %>% 
@@ -934,9 +950,7 @@ Including...
 * AOT
 * NFC
 * VA
-* ONS
 * CC risk
-* 10 year predictions
 * Slopes of 10 to 20 year predictions
 * Change score between local and non-local plot performance
   * Arctic vs. Ice Sheets
