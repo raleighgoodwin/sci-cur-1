@@ -489,7 +489,7 @@ int_means_tab %>%
   kable(digits = 2,
         align = "c",
         col.names = c("", "SciCur", "RPM", "Con1_M", "Con1_SE", "Con2_M", "Con2_SE", "Lib1_M", "Lib1_SE", "Lib2_M", "Lib2_SE")) %>% 
-  add_header_above(c(" " = 3, "Conservative" = 4, "Liberal" = 4), line_sep = 25) %>%
+  add_header_above(c(" " = 3, "Conservative"  = 4, "Liberal" = 4), line_sep = 25) %>%
   kable_styling(position = "left") %>% 
   row_spec(row = c(1, 2, 5, 6), background = "lightgray") %>% 
   column_spec(column = 1, bold = T, color = "white", background = c("maroon", "maroon", "maroon", "maroon", "royalblue", "royalblue", "royalblue", "royalblue")) %>% 
