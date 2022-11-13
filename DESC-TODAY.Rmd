@@ -1,7 +1,12 @@
 ---
 title: "Science Curiosity Study 1 Data"
-output: pdf_document
-always_allow_html: true
+output:
+  html_document:
+    theme: cosmo
+    toc: true
+    toc_depth: 4
+    toc_float:
+      collapsed: false
 ---
 
 ```{r mess-warn, include=FALSE}

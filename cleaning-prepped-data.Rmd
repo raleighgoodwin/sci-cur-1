@@ -64,7 +64,7 @@ df2 <- df1 %>%
          contains("1_1_sc"), contains("time_page_submit_sc"), 
          contains("rav"), contains("cc_risk"), contains("ccr"),
          contains("dem"), contains("start_date"), contains("end_date"), 
-         contains("finished"), contains("consent"), contains("open"), contains("fl_"), contains("nfc"), contains("aot"), contains("verb_log")
+         contains("finished"), contains("consent"), contains("open"), contains("fl_"), contains("nfc"), contains("aot"), contains("verb_log"), num_score_b
          )
 ```
 
@@ -273,7 +273,7 @@ df4 <- df4 %>% # score sci cur
          sc_scoredz = scale(sc_scored)) # z score
 ```
 
-## No Outliers
+## 3 Outliers
 
 There are 3 outliers on this variable.
 
@@ -843,7 +843,7 @@ Now excluding (df_ex_dt / df7_ex_flr):
 * Was not in both dfs (b and s1)
 * Outliers:
   + Duration (1)
-  + Science Curiosity (0)
+  + Science Curiosity (3)
   + Raven's Progressive Matrices (2)
   + **Poor Performance on Filler Items (5 w/ df_ex_dt; 8 w/ df_ex_flr)**
 
@@ -890,7 +890,7 @@ Final df (df7) is excluding:
 * Was not in both dfs (b and s1)
 * Outliers:
   + Duration (1)
-  + Science Curiosity (0)
+  + Science Curiosity (3)
   + Raven's Progressive Matrices (2)
 
 ```{r save-df7}
@@ -937,7 +937,7 @@ Now excluding (df7attn):
 * Was not in both dfs (b and s1)
 * Outliers:
   + Duration (1)
-  + Science Curiosity (0)
+  + Science Curiosity (3)
   + Raven's Progressive Matrices (2)
 * **Attention check failure (381)**
 
